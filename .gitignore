@@ -4,3 +4,14 @@
 *.jar
 *.war
 *.ear
+
+# OSX droppings #
+.DS_Store
+
+# documentation #
+**/docs/
+*.txt
+
+
+
+*.jpage
