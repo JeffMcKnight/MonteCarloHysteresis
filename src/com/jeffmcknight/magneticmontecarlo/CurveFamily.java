@@ -84,6 +84,38 @@ public class CurveFamily
 		return DEFAULT_RECORD_POINTS;
 	}
 
+	/**
+	 * @return the averageMCurve
+	 */
+	protected HysteresisCurve getAverageMCurve()
+	{
+		return averageMCurve;
+	}
+
+	/**
+	 * @return the minMCurve
+	 */
+	protected HysteresisCurve getMinMCurve()
+	{
+		return minMCurve;
+	}
+
+	/**
+	 * @return the maxMCurve
+	 */
+	protected HysteresisCurve getMaxMCurve()
+	{
+		return maxMCurve;
+	}
+
+	/**
+	 * @return the mhCurveSet
+	 */
+	protected HysteresisCurve[] getMhCurveSet()
+	{
+		return mhCurveSet;
+	}
+
 	//******************** getRecordPasses() ********************
 	public int getRecordPasses() 
 	{

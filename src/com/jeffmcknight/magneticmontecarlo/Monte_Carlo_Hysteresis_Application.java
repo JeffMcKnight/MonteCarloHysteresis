@@ -3,6 +3,8 @@
  */
 package com.jeffmcknight.magneticmontecarlo;
 
+import info.monitorenter.gui.chart.demos.MinimalStaticChart;
+
 import java.awt.GraphicsConfiguration;
 import java.awt.HeadlessException;
 
@@ -15,8 +17,8 @@ import javax.swing.JFrame;
  */
 public class Monte_Carlo_Hysteresis_Application extends JFrame 
 {
-	public static final String VERSION_NUMBER = "0.5.6";
-	public static final String VERSION_SUFFIX = "0-5-6";
+	public static final String VERSION_NUMBER = "0.6.1";
+	public static final String VERSION_SUFFIX = "0-6-1";
 	public static final String TITLE_BAR_TEXT = "Monte Carlo Hysteresis " + VERSION_NUMBER;
 
 	/**

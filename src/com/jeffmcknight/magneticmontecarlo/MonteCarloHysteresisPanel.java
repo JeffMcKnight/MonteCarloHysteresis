@@ -3,8 +3,18 @@
 
 package com.jeffmcknight.magneticmontecarlo;
 
+import info.monitorenter.gui.chart.Chart2D;
+import info.monitorenter.gui.chart.IAxis.AxisTitle;
+import info.monitorenter.gui.chart.ITrace2D;
+import info.monitorenter.gui.chart.ITracePainter;
+import info.monitorenter.gui.chart.errorbars.ErrorBarPainter;
+import info.monitorenter.gui.chart.pointpainters.PointPainterDisc;
+import info.monitorenter.gui.chart.traces.Trace2DSimple;
+import info.monitorenter.gui.chart.traces.painters.TracePainterDisc;
+
 import java.awt.*;
 import java.awt.event.*;
+
 import javax.swing.*;
 import javax.swing.border.*;
 
@@ -38,10 +48,23 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
 	private JComboBox dipoleRadiusList;
 	private JComboBox packingFractionList;
 	private JComboBox recordCountList;
+	
+	Chart2D mhChart;
+    // Create a frame.
+    JFrame chartFrame;
+	private Color traceColor = new Color(255,0,0);
+	private float traceHue = 0f;
+	private String stringColor;
+	private int traceNumber;
 
     public MonteCarloHysteresisPanel() 
     {
     	numberRecordPoints = CurveFamily.getDefaultRecordPoints();
+        // Create a chart:  
+        mhChart = new Chart2D();
+        // Create a frame.
+        chartFrame = new JFrame("M-H Curve Families");
+
         setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
         
         String[] intLatticeItems = {"1","2","3","4","5","6","7","8","9","10"};
@@ -201,6 +224,8 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
 
 			mhCurves.recordMHCurves(recordedNetMNegative, recordedNetMPositive);
 			mhCurves.writeCurvesToFile(recordedNetMNegative, recordedNetMPositive);
+			
+			showChart(mhCurves);
 		}
         
     } // END ******************** actionPerformed() ********************
@@ -227,7 +252,59 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         frame.pack();
         frame.setVisible(true);
     }
-    
+
+    public void showChart(CurveFamily chartCurves)
+    {
+    	traceNumber = traceNumber  + 1;
+    	traceColor = Color.getHSBColor(traceHue, 1f, 0.85f);
+    	traceHue = (traceHue + 0.22f) ;
+    	
+    	// Create an ITrace: 
+    	ITrace2D trace = new Trace2DSimple(); 
+    	// Set trace properties (name, color, point shape to disc) 
+    	trace.setName("M-H Curve #" + traceNumber );
+    	trace.setColor(traceColor);
+    	trace.setTracePainter(new TracePainterDisc());
+
+    	
+    	
+    	
+    	// Set chart axis titles
+      	mhChart.getAxisX().getAxisTitle().setTitle("H");
+      	mhChart.getAxisY().getAxisTitle().setTitle("M");
+
+    	// Show chart grids for both x and y axis 
+      	mhChart.getAxisX().setPaintGrid(true);
+      	mhChart.getAxisY().setPaintGrid(true);
+
+    	
+    	// Add the trace to the chart. This has to be done before adding points (deadlock prevention): 
+    	mhChart.addTrace(trace);    
+    	// Add all points, as it is static: 
+    	//      Random random = new Random();
+    	for(int i=0; i<chartCurves.getAverageMCurve().getLength(); i++)
+    	{
+    		trace.addPoint(chartCurves.getAverageMCurve().getDipole(i).getH(),chartCurves.getAverageMCurve().getDipole(i).getM());
+    	}
+    	// Make it visible:
+    	// add the chart to the frame: 
+    	chartFrame.getContentPane().add(mhChart);
+    	chartFrame.setSize(800,600);
+    	chartFrame.setLocation(300, 0);
+    	// Enable the termination button [cross on the upper right edge]: 
+    	chartFrame.addWindowListener
+    	(
+    			new WindowAdapter()
+    			{
+    				public void windowClosing(WindowEvent e)
+    				{
+    					System.exit(0);
+    				}
+    			}
+    			);
+    	chartFrame.setVisible(true);
+    }
+
     
 /*
     public static void main(String[] args) 
