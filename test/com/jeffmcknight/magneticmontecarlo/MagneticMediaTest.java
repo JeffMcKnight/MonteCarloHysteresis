@@ -129,11 +129,11 @@ public class MagneticMediaTest extends TestCase {
 
 		
 //		Along X axis, net M should be zero for an even number of dipoles and M/intAxisLength for an odd number of dipoles
-		assertEquals((intAxisLength % 2)*MonteCarloHysteresisPanel.saturationM/intAxisLength, sdpXaxis.recordToM(floatHApplied), 0.001f);
+		assertEquals((intAxisLength % 2)*MonteCarloHysteresisPanel.SATURATION_M/intAxisLength, sdpXaxis.recordToM(floatHApplied), 0.001f);
 //		Along Y axis, net M should be zero for an even number of dipoles and M/intAxisLength for an odd number of dipoles
-		assertEquals((intAxisLength % 2)*MonteCarloHysteresisPanel.saturationM/intAxisLength, sdpYaxis.recordToM(floatHApplied), 0.001f);
+		assertEquals((intAxisLength % 2)*MonteCarloHysteresisPanel.SATURATION_M/intAxisLength, sdpYaxis.recordToM(floatHApplied), 0.001f);
 //		Along Z axis, net M should be MonteCarloHysteresisPanel.floatDipoleM
-		assertEquals(MonteCarloHysteresisPanel.saturationM, sdpZaxis.recordToM(floatHApplied), 0.001f);
+		assertEquals(MonteCarloHysteresisPanel.SATURATION_M, sdpZaxis.recordToM(floatHApplied), 0.001f);
 
 	
 	}

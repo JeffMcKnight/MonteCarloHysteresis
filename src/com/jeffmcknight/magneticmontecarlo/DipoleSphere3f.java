@@ -7,7 +7,7 @@ import javax.vecmath.Vector3f;
 public class DipoleSphere3f extends Point3f 
 {
 	private static final float floatPackingFraction = 0.5f; // 1.0 is 100% packing fraction
-	private static final float floatDefaultDipoleR = 0.5f * floatPackingFraction * MonteCarloHysteresisPanel.defaultIndexA;
+	private static final float floatDefaultDipoleR = 0.5f * floatPackingFraction * MonteCarloHysteresisPanel.DEFAULT_INDEX_A;
 	private static final Vector3f z = new Vector3f(0.0f, 0.0f, 1.0f);					//	define ^Z
 	private static final long serialVersionUID = 5659235650411637264L;
 	private float m;				// dipole moment
@@ -106,12 +106,12 @@ public class DipoleSphere3f extends Point3f
 
 	public void setMUp() 
 	{
-		this.m = MonteCarloHysteresisPanel.saturationM;
+		this.m = MonteCarloHysteresisPanel.SATURATION_M;
 	}
 
 	public void setMDown() 
 	{
-		this.m = -MonteCarloHysteresisPanel.saturationM;
+		this.m = -MonteCarloHysteresisPanel.SATURATION_M;
 	}
 
 	public float getRadius() 

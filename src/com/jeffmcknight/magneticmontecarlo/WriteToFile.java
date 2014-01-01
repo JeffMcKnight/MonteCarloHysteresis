@@ -55,7 +55,9 @@ public class WriteToFile
 			} 
 			catch (IOException e) 
 			{
+			   System.out.println("FILE ALREADY EXISTS!!");
 				// TODO Auto-generated catch block
+			   // Handle with user dialog.
 				e.printStackTrace();
 			}
 		}

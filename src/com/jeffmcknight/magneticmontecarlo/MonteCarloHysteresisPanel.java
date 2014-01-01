@@ -4,58 +4,75 @@
 package com.jeffmcknight.magneticmontecarlo;
 
 import info.monitorenter.gui.chart.Chart2D;
-import info.monitorenter.gui.chart.IAxis.AxisTitle;
 import info.monitorenter.gui.chart.ITrace2D;
-import info.monitorenter.gui.chart.ITracePainter;
-import info.monitorenter.gui.chart.errorbars.ErrorBarPainter;
-import info.monitorenter.gui.chart.pointpainters.PointPainterDisc;
 import info.monitorenter.gui.chart.traces.Trace2DSimple;
 import info.monitorenter.gui.chart.traces.painters.TracePainterDisc;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 
-import javax.swing.*;
-import javax.swing.border.*;
-
-import com.jeffmcknight.magneticmontecarlo.CurveFamily;
-
-import java.util.*;
-import java.text.SimpleDateFormat;
+import javax.swing.AbstractButton;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSeparator;
+import javax.swing.SwingConstants;
 
 //******************** class - MonteCarloHysteresisPanel ********************
 public class MonteCarloHysteresisPanel extends JPanel implements ActionListener 
 {
-	private static final int DEFAULT_BORDER_SPACE = 30;
-	public static final String DIMENSIONS_X_AXIS_LABEL = "Lattice dimensions (X-axis):  ";
-	public static final String DIMENSIONS_Y_AXIS_LABEL = "Lattice dimensions (Y-axis):  ";
-	public static final String DIMENSIONS_Z_AXIS_LABEL = "Lattice dimensions (Z-axis):  ";
-	public static final String DIPOLE_RADIUS_LABEL = "Dipole radius [um]:               ";
-	public static final String PACKING_FRACTION_LABEL = "Packing Fraction:                  ";
-	public static final String RECORDING_PASSES_LABEL = "Number of Recording Passes:  ";
-	public static final float saturationM    = 100.0f;
-	public static final float defaultIndexA  = 1.0f;
-	static int   intNumberCurves   = 1;
-	public int   numberRecordPoints;
-	private CurveFamily mhCurves;
+   /**
+    * 
+    */
+   private static final long serialVersionUID = 5824180412325621552L;
+   private static final int DEFAULT_BORDER_SPACE = 30;
+   public static final float SATURATION_M    = 100.0f;
+   public static final float DEFAULT_INDEX_A  = 1.0f;
+   private static final String CURVE_NAME = "Curve #";
+   public static final String DIMENSIONS_X_AXIS_LABEL = "Lattice dimensions (X-axis):  ";
+   public static final String DIMENSIONS_Y_AXIS_LABEL = "Lattice dimensions (Y-axis):  ";
+   public static final String DIMENSIONS_Z_AXIS_LABEL = "Lattice dimensions (Z-axis):  ";
+   public static final String DIPOLE_RADIUS_LABEL = "Dipole radius [um]:               ";
+   public static final String PACKING_FRACTION_LABEL = "Packing Fraction:                  ";
+   public static final String RECORDING_PASSES_LABEL = "Number of Recording Passes:  ";
+   private static final String RUN_SIMULATION = "run_simulation";
+   final static String[] LATTICE_ITEMS = {"1","2","3","4","5","6","7","8","9","10"};
+   final static String[] PACKING_FRACTION_OPTIONS = {"1.0","0.9","0.8","0.7","0.6","0.5","0.4","0.3","0.2","0.1"};
+   final static String[] DIPOLE_RADIUS_OPTIONS = {"0.1","0.2","0.3","0.4","0.5","0.6","0.7","0.8","0.9","1.0","1.1","1.2","1.3","1.4","1.5","1.6","1.7","1.8","1.9","2.0"};
+   static int   intNumberCurves   = 1;
+   public int   numberRecordPoints;
+   private CurveFamily mhCurves;
 
-	static JFrame frame;
-    JLabel result;
-    String currentPattern;
-	private JComboBox latticeXList;
-	private JComboBox latticeYList;
-	private JComboBox latticeZList;
-	private JComboBox dipoleRadiusList;
-	private JComboBox packingFractionList;
-	private JComboBox recordCountList;
-	
-	Chart2D mhChart;
+   static JFrame frame;
+   private JComboBox mXComboBox;
+   private JComboBox mYComboBox;
+   private JComboBox mZComboBox;
+   private JComboBox dipoleRadiusList;
+   private JComboBox packingFractionList;
+   private JComboBox recordCountList;
+
+   private Chart2D mhChart;
     // Create a frame.
-    JFrame chartFrame;
-	private Color traceColor = new Color(255,0,0);
-	private float traceHue = 0f;
-	private String stringColor;
-	private int traceNumber;
+   JFrame chartFrame;
+   private JPanel chartPanel;
+   private JPanel comboBoxPanel;
+   private Color traceColor = new Color(255,0,0);
+   private float traceHue = 0f;
+   private int traceNumber;
+   private ITrace2D mTrace;
+   
+   public interface CurveUpdateListener{
+      
+   }
 
     public MonteCarloHysteresisPanel() 
     {
@@ -63,114 +80,59 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         // Create a chart:  
         mhChart = new Chart2D();
         // Create a frame.
-        chartFrame = new JFrame("M-H Curve Families");
-
-        setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
+        this.setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
         
-        String[] intLatticeItems = {"1","2","3","4","5","6","7","8","9","10"};
-        String[] floatLatticeItems = {"1.0","0.9","0.8","0.7","0.6","0.5","0.4","0.3","0.2","0.1"};
-        String[] floatDipoleRadiusItems = {"0.1","0.2","0.3","0.4","0.5","0.6","0.7","0.8","0.9","1.0","1.1","1.2","1.3","1.4","1.5","1.6","1.7","1.8","1.9","2.0"};
+        comboBoxPanel = new JPanel();
+        comboBoxPanel.setLayout(new BoxLayout(comboBoxPanel, BoxLayout.PAGE_AXIS));
+        this.add(comboBoxPanel);
+        
+        chartPanel = new JPanel();
+        chartPanel.setLayout(new BoxLayout(chartPanel, BoxLayout.X_AXIS));
+        this.add(chartPanel);
+        
+        buildRunConfigPanel();
 
-        //Set up the UI for selecting a pattern.
-//        JLabel versionTextLabel		= new JLabel("Monte Carlo Hysteresis Application, Version: " + Monte_Carlo_Hysteresis_Application.VERSION_NUMBER);
-        JLabel latticeXLabel		= new JLabel(DIMENSIONS_X_AXIS_LABEL);
-        JLabel latticeYLabel		= new JLabel(DIMENSIONS_Y_AXIS_LABEL);
-        JLabel latticeZLabel		= new JLabel(DIMENSIONS_Z_AXIS_LABEL);
-        JLabel dipoleRadiusLabel	= new JLabel(DIPOLE_RADIUS_LABEL);
-        JLabel packingFractionLabel	= new JLabel(PACKING_FRACTION_LABEL);
-        JLabel recordCountLabel		= new JLabel(RECORDING_PASSES_LABEL);
+        showChart(chartPanel);
+    } // END constructor
 
-        latticeXList = new JComboBox(intLatticeItems);
-        latticeXList.setEditable(true);
-        latticeXList.addActionListener(this);
+   // *************** buildRunConfigPanel() ***************
+   /**
+    * Build JPanel on left side of JFrame that contains 
+    * labeled JComboBoxes to set simulation parameters 
+    */
+   public void buildRunConfigPanel()
+   {
+        int initialComboIndex = 6;
 
-        latticeYList = new JComboBox(intLatticeItems);
-        latticeYList.setEditable(true);
-        latticeYList.addActionListener(this);
+        // Create combo boxes for lattice parameters
+        mXComboBox = new JComboBox(LATTICE_ITEMS);
+        mYComboBox = new JComboBox(LATTICE_ITEMS);
+        mZComboBox = new JComboBox(LATTICE_ITEMS);
+        dipoleRadiusList = new JComboBox(DIPOLE_RADIUS_OPTIONS);
+        packingFractionList = new JComboBox(PACKING_FRACTION_OPTIONS);
+        recordCountList = new JComboBox(LATTICE_ITEMS);
 
-        latticeZList = new JComboBox(intLatticeItems);
-        latticeZList.setEditable(true);
-        latticeZList.addActionListener(this);
+        // Create combo box panels for lattice dimensions
+        JPanel xComboBoxPanel = buildComboBoxPanel(initialComboIndex, DIMENSIONS_X_AXIS_LABEL, mXComboBox);
+        JPanel yComboBoxPanel = buildComboBoxPanel(initialComboIndex, DIMENSIONS_Y_AXIS_LABEL, mYComboBox);
+        JPanel zComboBoxPanel = buildComboBoxPanel(initialComboIndex, DIMENSIONS_Z_AXIS_LABEL, mZComboBox);
+        JPanel dipoleRadiusPanel = buildComboBoxPanel(3, DIPOLE_RADIUS_LABEL, dipoleRadiusList);
+        JPanel packingFractionPanel = buildComboBoxPanel(1, PACKING_FRACTION_LABEL, packingFractionList);
+        JPanel recordCountPanel = buildComboBoxPanel(0, RECORDING_PASSES_LABEL, recordCountList);
 
-        dipoleRadiusList = new JComboBox(floatDipoleRadiusItems);
-        dipoleRadiusList.setEditable(true);
-        dipoleRadiusList.addActionListener(this);
-
-        packingFractionList = new JComboBox(floatLatticeItems);
-        packingFractionList.setEditable(true);
-        packingFractionList.addActionListener(this);
-
-        recordCountList = new JComboBox(intLatticeItems);
-        recordCountList.setEditable(true);
-        recordCountList.addActionListener(this);
-
-  
-        // ***** Lay out everything. *****
-
-        // Add combo box for lattice X dimension
-        JPanel xaxisPanel = new JPanel();
-        xaxisPanel.setLayout(new BoxLayout(xaxisPanel, BoxLayout.LINE_AXIS));
-        xaxisPanel.add(latticeXLabel);
-        latticeXList.setAlignmentX(Component.LEFT_ALIGNMENT);
-        latticeXList.setSelectedIndex(4);
-        xaxisPanel.add(latticeXList);
-        xaxisPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        add(xaxisPanel);
-                
-        // Add combo box for lattice Y dimension
-        JPanel yaxisPanel = new JPanel();
-        yaxisPanel.setLayout(new BoxLayout(yaxisPanel, BoxLayout.LINE_AXIS));
-        yaxisPanel.add(latticeYLabel);
-        latticeYList.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        latticeYList.setSelectedIndex(4);
-        yaxisPanel.add(latticeYList);
-        yaxisPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        add(yaxisPanel);
-                
-        // Add combo box for lattice Z dimension
-        JPanel zaxisPanel = new JPanel();
-        zaxisPanel.setLayout(new BoxLayout(zaxisPanel, BoxLayout.LINE_AXIS));
-        zaxisPanel.add(latticeZLabel);
-        latticeZList.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        latticeZList.setSelectedIndex(4);
-        zaxisPanel.add(latticeZList);
-        zaxisPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        add(zaxisPanel);
-         
+        // Add combo box panels for lattice dimensions
+        comboBoxPanel.add(xComboBoxPanel);
+        comboBoxPanel.add(yComboBoxPanel);
+        comboBoxPanel.add(zComboBoxPanel);
         // Add separator line 
-        add(new JSeparator(SwingConstants.HORIZONTAL));
-        
-        // Add combo box for dipole radius
-        JPanel dipoleRadiusPanel = new JPanel();
-        dipoleRadiusPanel.setLayout(new BoxLayout(dipoleRadiusPanel, BoxLayout.LINE_AXIS));
-        dipoleRadiusPanel.add(dipoleRadiusLabel);
-        dipoleRadiusList.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        dipoleRadiusList.setSelectedIndex(2);
-        dipoleRadiusPanel.add(dipoleRadiusList);
-        dipoleRadiusPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        add(dipoleRadiusPanel);
-
-        // Add combo box for packing fraction
-        JPanel packingFractionPanel = new JPanel();
-        packingFractionPanel.setLayout(new BoxLayout(packingFractionPanel, BoxLayout.LINE_AXIS));
-        packingFractionPanel.add(packingFractionLabel);
-        packingFractionList.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        packingFractionList.setSelectedIndex(4);
-        packingFractionPanel.add(packingFractionList);
-        packingFractionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        add(packingFractionPanel);
-
-        // Add combo box for number of curves per family
-        JPanel recordCountPanel = new JPanel();
-        recordCountPanel.setLayout(new BoxLayout(recordCountPanel, BoxLayout.LINE_AXIS));
-        recordCountPanel.add(recordCountLabel);
-        recordCountList.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        recordCountPanel.add(recordCountList);
-        recordCountPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        add(recordCountPanel);
+        comboBoxPanel.add(new JSeparator(SwingConstants.HORIZONTAL));
+        // Add combo box panels for dipole radius, packing fraction, et
+        comboBoxPanel.add(dipoleRadiusPanel);
+        comboBoxPanel.add(packingFractionPanel);
+        comboBoxPanel.add(recordCountPanel);
         
         // Add vertical space between combo buttons and run JButton
-        add(Box.createRigidArea(new Dimension(0, 20)));	
+        comboBoxPanel.add(Box.createRigidArea(new Dimension(0, 20)));	
 
         // Add run JButton
         JButton buttonRun;
@@ -178,7 +140,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         buttonRun.setVerticalTextPosition(AbstractButton.CENTER);
         buttonRun.setHorizontalTextPosition(AbstractButton.CENTER); //aka LEFT, for left-to-right locales
         buttonRun.setMnemonic(KeyEvent.VK_R);
-        buttonRun.setActionCommand("run_simulation");
+        buttonRun.setActionCommand(RUN_SIMULATION);
         buttonRun.addActionListener(this);
         buttonRun.setToolTipText("Click to start simulation");
         JPanel buttonRunPanel = new JPanel();				//create panel for button
@@ -186,7 +148,9 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         buttonRunPanel.add(buttonRun);  					// add button to panel
         buttonRunPanel.setAlignmentX(LEFT_ALIGNMENT);
         buttonRun.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        add(buttonRunPanel);
+        comboBoxPanel.add(buttonRunPanel);
+        
+        comboBoxPanel.add(Box.createVerticalStrut(300));
 
         // Add border padding around entire panel
         setBorder(BorderFactory.createEmptyBorder(
@@ -194,18 +158,46 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         		DEFAULT_BORDER_SPACE,
         		DEFAULT_BORDER_SPACE,
         		DEFAULT_BORDER_SPACE));
+        
+        comboBoxPanel.setMaximumSize(new Dimension(200,600));
+   }
 
-    } // END constructor
+   // *************** () ***************
+   /**
+    * @param initialComboIndex
+    * @param label TODO
+    * @param comboBox TODO
+    * @return TODO
+    */
+   public JPanel buildComboBoxPanel(int initialComboIndex, String label, JComboBox comboBox)
+   {
+      JLabel comboBoxLabel = new JLabel(label);
+      JPanel panel = new JPanel();
+
+      comboBox.setEditable(true);
+      comboBox.addActionListener(this);
+      comboBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+      comboBox.setSelectedIndex(initialComboIndex);
+
+      panel.setLayout(new BoxLayout(panel, BoxLayout.LINE_AXIS));
+      panel.add(comboBoxLabel);
+      panel.add(comboBox);
+      panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+      panel.setMaximumSize(new Dimension(300, 0));
+      
+      return panel;
+   }
 
     //******************** actionPerformed() ********************
+   // Implements ActionListener callback method
     public void actionPerformed(ActionEvent e) 
     {
     	// Capture input from all combo boxes
-        int xAxisCount = Integer.parseInt((String) latticeXList.getSelectedItem());
+        int xAxisCount = Integer.parseInt((String) mXComboBox.getSelectedItem());
         System.out.println("xAxisCount: " + xAxisCount);
-        int yAxisCount = Integer.parseInt((String) latticeYList.getSelectedItem());
+        int yAxisCount = Integer.parseInt((String) mYComboBox.getSelectedItem());
         System.out.println("yAxisCount: " + yAxisCount);
-        int zAxisCount = Integer.parseInt((String) latticeZList.getSelectedItem());
+        int zAxisCount = Integer.parseInt((String) mZComboBox.getSelectedItem());
         System.out.println("zAxisCount: " + zAxisCount);
         float dipoleRadius = Float.parseFloat((String) dipoleRadiusList.getSelectedItem());
         System.out.println("dipoleRadius: " + dipoleRadius);
@@ -215,7 +207,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         System.out.println("recordCount: " + recordCount);
 
         // Run simulation if run button is clicked
-		if ( "run_simulation".equals(e.getActionCommand()) ) 
+		if ( e.getActionCommand().equals(RUN_SIMULATION) ) 
 		{
 			mhCurves = new CurveFamily(recordCount, xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius);
 			
@@ -223,9 +215,9 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
 			float recordedNetMPositive[][] = new float[numberRecordPoints][recordCount];
 
 			mhCurves.recordMHCurves(recordedNetMNegative, recordedNetMPositive);
-			mhCurves.writeCurvesToFile(recordedNetMNegative, recordedNetMPositive);
+//			mhCurves.writeCurvesToFile();
 			
-			showChart(mhCurves);
+	      addAllPoints(mhCurves, mTrace);
 		}
         
     } // END ******************** actionPerformed() ********************
@@ -236,11 +228,13 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
      * Create the GUI and show it.  For thread safety,
      * this method should only be invoked from the
      * event-dispatching thread.
+    * @param panel TODO
      */
+/*    
     private static void createAndShowGUI() 
     {
         //Create and set up the window.
-        JFrame frame = new JFrame("Bertram Monte Carlo");
+        JFrame frame = new JFrame(BERTRAM_MONTE_CARLO);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         //Create and set up the content pane.
@@ -252,58 +246,77 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         frame.pack();
         frame.setVisible(true);
     }
-
-    public void showChart(CurveFamily chartCurves)
+*/
+    public void showChart(JPanel panel)
     {
-    	traceNumber = traceNumber  + 1;
-    	traceColor = Color.getHSBColor(traceHue, 1f, 0.85f);
-    	traceHue = (traceHue + 0.22f) ;
-    	
-    	// Create an ITrace: 
-    	ITrace2D trace = new Trace2DSimple(); 
-    	// Set trace properties (name, color, point shape to disc) 
-    	trace.setName("M-H Curve #" + traceNumber );
-    	trace.setColor(traceColor);
-    	trace.setTracePainter(new TracePainterDisc());
+       // Set chart axis titles
+       mhChart.getAxisX().getAxisTitle().setTitle("H");
+       mhChart.getAxisY().getAxisTitle().setTitle("M");
 
-    	
-    	
-    	
-    	// Set chart axis titles
-      	mhChart.getAxisX().getAxisTitle().setTitle("H");
-      	mhChart.getAxisY().getAxisTitle().setTitle("M");
+       // Show chart grids for both x and y axis 
+       mhChart.getAxisX().setPaintGrid(true);
+       mhChart.getAxisY().setPaintGrid(true);
 
-    	// Show chart grids for both x and y axis 
-      	mhChart.getAxisX().setPaintGrid(true);
-      	mhChart.getAxisY().setPaintGrid(true);
+       // Make it visible:
+       // add the chart to the frame: 
+       panel.add(mhChart);
+       panel.setMinimumSize(new Dimension(800, 600));
+       panel.setLocation(0, 0);
+       panel.setVisible(true);
+    }
 
-    	
-    	// Add the trace to the chart. This has to be done before adding points (deadlock prevention): 
-    	mhChart.addTrace(trace);    
-    	// Add all points, as it is static: 
-    	//      Random random = new Random();
-    	for(int i=0; i<chartCurves.getAverageMCurve().getLength(); i++)
+   // *************** () ***************
+   /**
+    * @param chartCurves
+    * @param trace
+    */
+   public void addAllPoints(CurveFamily chartCurves, ITrace2D trace)
+   {
+      // Increment the count and update the color 
+      // to display multiple traces on the same chart.
+      traceNumber = traceNumber  + 1;
+      traceColor = Color.getHSBColor(traceHue, 1f, 0.85f);
+      traceHue = (traceHue + 0.22f);
+      String traceName = new StringBuilder(CURVE_NAME + traceNumber)
+      .append(" : ")
+      .append(mhCurves.getCubeEdgeX())
+      .append("x")
+      .append(mhCurves.getCubeEdgeY())
+      .append("x")
+      .append(mhCurves.getCubeEdgeZ())
+      .append(" - Packing Fraction: ")
+      .append(mhCurves.getPackingFraction())
+      .append(" - Radius [um]: ")
+      .append(mhCurves.getDipoleRadius())
+      .toString();
+      
+      trace = new Trace2DSimple(); 
+      // Set trace properties (name, color, point shape to disc) 
+      trace.setName(traceName);
+      trace.setColor(traceColor);
+      trace.setTracePainter(new TracePainterDisc());
+      // Add the trace to the chart. This has to be done before adding points (deadlock prevention): 
+      mhChart.addTrace(trace);    
+
+      for(int i=0; i<chartCurves.getAverageMCurve().getLength(); i++)
     	{
     		trace.addPoint(chartCurves.getAverageMCurve().getDipole(i).getH(),chartCurves.getAverageMCurve().getDipole(i).getM());
     	}
-    	// Make it visible:
-    	// add the chart to the frame: 
-    	chartFrame.getContentPane().add(mhChart);
-    	chartFrame.setSize(800,600);
-    	chartFrame.setLocation(300, 0);
-    	// Enable the termination button [cross on the upper right edge]: 
-    	chartFrame.addWindowListener
-    	(
-    			new WindowAdapter()
-    			{
-    				public void windowClosing(WindowEvent e)
-    				{
-    					System.exit(0);
-    				}
-    			}
-    			);
-    	chartFrame.setVisible(true);
-    }
+   }
+
+   // ******************** getmhChart() ********************
+   // @return mhChart
+   Chart2D getMhChart()
+   {
+      return mhChart;
+   }
+
+   // ******************** getmhCurves() ********************
+   // @return mhCurves
+   CurveFamily getMhCurves()
+   {
+      return mhCurves;
+   }
 
     
 /*

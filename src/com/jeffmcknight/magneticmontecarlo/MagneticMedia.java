@@ -33,7 +33,7 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	public MagneticMedia() 
 	{
 		super(0);			// create empty arraylist
-		this.a = MonteCarloHysteresisPanel.defaultIndexA;
+		this.a = MonteCarloHysteresisPanel.DEFAULT_INDEX_A;
 		this.m = 0.0f;
 		this.xCellCount = 1;
 		this.yCellCount = 1;
@@ -45,7 +45,7 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	public MagneticMedia(int intSize) 
 	{
 		super(intSize);			// create with "intSize" elements; assumes cube with 1 unit per side
-		this.a = MonteCarloHysteresisPanel.defaultIndexA;
+		this.a = MonteCarloHysteresisPanel.DEFAULT_INDEX_A;
 		this.m = 0.0f;
 		this.xCellCount = 1;
 		this.yCellCount = 1;
@@ -57,7 +57,7 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	public MagneticMedia(int x, int y, int z) 
 	{
 		super(0);
-		this.a = MonteCarloHysteresisPanel.defaultIndexA;
+		this.a = MonteCarloHysteresisPanel.DEFAULT_INDEX_A;
 		this.m = 0.0f;
 		this.xCellCount = x;
 		this.yCellCount = y;
@@ -170,8 +170,8 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 		{
 			floatB = floatB + this.get(i).getHInteraction(this.get(j));
 		}
-		if (floatB > 0.0f)	{return( MonteCarloHysteresisPanel.saturationM);}
-		else				{return(-MonteCarloHysteresisPanel.saturationM);}
+		if (floatB > 0.0f)	{return( MonteCarloHysteresisPanel.SATURATION_M);}
+		else				{return(-MonteCarloHysteresisPanel.SATURATION_M);}
 	}
 	
 	

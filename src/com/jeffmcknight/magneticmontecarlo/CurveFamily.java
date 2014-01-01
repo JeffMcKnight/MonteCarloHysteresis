@@ -3,6 +3,7 @@
  */
 package com.jeffmcknight.magneticmontecarlo;
 
+import java.io.File;
 import java.sql.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -15,19 +16,20 @@ import java.util.Calendar;
  */
 public class CurveFamily 
 {
-	private static final int DEFAULT_RECORD_POINTS = 50;
-	public static final int   DEFAULT_RECORD_STEP_SIZE = 2;
-	private static final float DEFAULT_DIPOLE_RADIUS = 0.5f;
-	private static final float DEFAULT_LATTICE_CONSTANT = 1.0f;
-	private static final float DEFAULT_PACKING_FRACTION = 1.0f;
-	public static final float SATURATION_M    = 100.0f;
-	public static final float MAXIMUM_H    = 75.0f;
+   public static final String TAG = CurveFamily.class.getSimpleName();
+   public static final int DEFAULT_RECORD_POINTS = 50;
+	public static final int DEFAULT_RECORD_STEP_SIZE = 2;
+	public static final float DEFAULT_DIPOLE_RADIUS = 0.5f;
+	public static final float DEFAULT_LATTICE_CONSTANT = 1.0f;
+	public static final float DEFAULT_PACKING_FRACTION = 1.0f;
+	public static final float SATURATION_M = 100.0f;
+	public static final float MAXIMUM_H = 75.0f;
 
 	public int   curveCount;
 	public int   numberRecordPoints;
-	public int   cubeEdgeX;
-	public int   cubeEdgeY;
-	public int   cubeEdgeZ;
+	public int   mCubeEdgeX;
+	public int   mCubeEdgeY;
+	public int   mCubeEdgeZ;
 //	private float defaultDipoleRadius = 0.000001f;
 	private float latticeConst = DEFAULT_LATTICE_CONSTANT;
 	
@@ -36,6 +38,8 @@ public class CurveFamily
 	HysteresisCurve averageMCurve;
 	HysteresisCurve minMCurve;
 	HysteresisCurve maxMCurve;
+   private float mPackingFraction;
+   private float mDipoleRadius;
 	
 	
 //	public static final float defaultIndexA  = 1.0f;
@@ -51,10 +55,10 @@ public class CurveFamily
 	{
 		numberRecordPoints   = DEFAULT_RECORD_POINTS;
 		curveCount = count;
-		cubeEdgeX       = 10;
-		cubeEdgeY       = 10;
-		cubeEdgeZ       = 10;
-		magneticCube = new MagneticMedia(cubeEdgeX, cubeEdgeY, cubeEdgeZ, DEFAULT_PACKING_FRACTION, DEFAULT_DIPOLE_RADIUS);
+		mCubeEdgeX       = 10;
+		mCubeEdgeY       = 10;
+		mCubeEdgeZ       = 10;
+		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, DEFAULT_PACKING_FRACTION, DEFAULT_DIPOLE_RADIUS);
 		mhCurveSet = new  HysteresisCurve[count];
 		averageMCurve = new HysteresisCurve(MAXIMUM_H, DEFAULT_RECORD_STEP_SIZE);
 	}
@@ -63,11 +67,13 @@ public class CurveFamily
 	{
 		numberRecordPoints   = (int) (2*(MAXIMUM_H/DEFAULT_RECORD_STEP_SIZE) + 1);
 		curveCount = count;
-		cubeEdgeX       = xDim;
-		cubeEdgeY       = yDim;
-		cubeEdgeZ       = zDim;
+		mCubeEdgeX       = xDim;
+		mCubeEdgeY       = yDim;
+		mCubeEdgeZ       = zDim;
+		mPackingFraction = packingFraction;
+		mDipoleRadius = dipoleRadius;
 		latticeConst = 2f * dipoleRadius / packingFraction ; 
-		magneticCube = new MagneticMedia(cubeEdgeX, cubeEdgeY, cubeEdgeZ, packingFraction, dipoleRadius);
+		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, packingFraction, dipoleRadius);
 		averageMCurve = new HysteresisCurve(MAXIMUM_H, DEFAULT_RECORD_STEP_SIZE);
 		minMCurve     = new HysteresisCurve(MAXIMUM_H, DEFAULT_RECORD_STEP_SIZE);
 		maxMCurve     = new HysteresisCurve(MAXIMUM_H, DEFAULT_RECORD_STEP_SIZE);
@@ -78,7 +84,7 @@ public class CurveFamily
 		}
 	}
 
-	//******************** getDefaultRecordPoints() ********************
+   //******************** getDefaultRecordPoints() ********************
 	public static int getDefaultRecordPoints() 
 	{
 		return DEFAULT_RECORD_POINTS;
@@ -92,7 +98,42 @@ public class CurveFamily
 		return averageMCurve;
 	}
 
-	/**
+	// ******************** getcubeEdgeX() ********************
+   // @return cubeEdgeX
+   int getCubeEdgeX()
+   {
+      return mCubeEdgeX;
+   }
+
+   // ******************** getcubeEdgeY() ********************
+   // @return cubeEdgeY
+   int getCubeEdgeY()
+   {
+      return mCubeEdgeY;
+   }
+
+   // ******************** getcubeEdgeZ() ********************
+   // @return cubeEdgeZ
+   int getCubeEdgeZ()
+   {
+      return mCubeEdgeZ;
+   }
+
+   // ******************** getmDipoleRadius() ********************
+   // @return mDipoleRadius
+   float getDipoleRadius()
+   {
+      return mDipoleRadius;
+   }
+
+   // ******************** getlatticeConst() ********************
+   // @return latticeConst
+   float getLatticeConst()
+   {
+      return latticeConst;
+   }
+
+   /**
 	 * @return the minMCurve
 	 */
 	protected HysteresisCurve getMinMCurve()
@@ -116,6 +157,13 @@ public class CurveFamily
 		return mhCurveSet;
 	}
 
+   // ******************** getmPackingFraction() ********************
+   // @return mPackingFraction
+   float getPackingFraction()
+   {
+      return mPackingFraction;
+   }
+
 	//******************** getRecordPasses() ********************
 	public int getRecordPasses() 
 	{
@@ -131,19 +179,19 @@ public class CurveFamily
 	//******************** setCubeEdge() ********************
 	public void setCubeEdgeX(int cubeDim) 
 	{
-		this.cubeEdgeX = cubeDim;
+		this.mCubeEdgeX = cubeDim;
 	}
 
 	//******************** setCubeEdge() ********************
 	public void setCubeEdgeY(int cubeDim) 
 	{
-		this.cubeEdgeY = cubeDim;
+		this.mCubeEdgeY = cubeDim;
 	}
 
 	//******************** setCubeEdge() ********************
 	public void setCubeEdgeZ(int cubeDim) 
 	{
-		this.cubeEdgeZ = cubeDim;
+		this.mCubeEdgeZ = cubeDim;
 	}
 
 	//******************** getNumberRecordPoints() ********************
@@ -240,27 +288,32 @@ public class CurveFamily
 		}
 
 //******************** writeCurveToFile() ********************
-public void writeCurvesToFile(float[][] recordedNetMNegative,
-			float[][] recordedNetMPositive) 
+public void writeCurvesToFile(File destinationDirectory, File destinationFile) 
 {
-		float appliedH;
-		String userDirectory;
-		String fileSeparator;
-		String fullFileName;
-		String columnHeader;
+   String fullFileName;
+//		float appliedH;
+//		String userDirectory;
+//		String fileSeparator;
+//		String columnHeader;
 		
 
 		// Generate the full file path/name to put output csv in 
 		// same directory as the app (ie: userDirectory)
-		userDirectory = System.getProperty("user.dir");
-		fileSeparator = System.getProperty("file.separator");
-		fullFileName = userDirectory 
-				+ fileSeparator 
-				+ "MHCurve_" 
-				+ Monte_Carlo_Hysteresis_Application.VERSION_SUFFIX 
-				+ "_" 
-				+ System.currentTimeMillis()  
-				+ ".csv";
+//		userDirectory = System.getProperty("user.dir");
+//		fileSeparator = System.getProperty("file.separator");
+//		fullFileName = destinationDirectory 
+//				+ fileSeparator 
+//				+ "MHCurve_" 
+//				+ Monte_Carlo_Hysteresis_Application.VERSION_SUFFIX 
+//				+ "_" 
+//				+ System.currentTimeMillis()  
+//				+ ".csv";
+		fullFileName = (destinationFile.toString().toLowerCase().endsWith(".csv")) 
+		      ? destinationFile.toString() 
+		      : (destinationFile.toString() + ".csv");
+      System.out.println(TAG+" - writeCurvesToFile(): "
+            +"\t - fullFileName: "+fullFileName
+            );
 		WriteToFile.open(fullFileName);
 		
 		// write curve parameters to csv
@@ -385,11 +438,11 @@ private void writeParametersToFile()
 //	WriteToFile.write("Date/Time," + Calendar.getInstance().getTime());
 	WriteToFile.write("Date/Time," + stringDate);
 	WriteToFile.appendNewLine();
-	WriteToFile.write(MonteCarloHysteresisPanel.DIMENSIONS_X_AXIS_LABEL + "," + cubeEdgeX);
+	WriteToFile.write(MonteCarloHysteresisPanel.DIMENSIONS_X_AXIS_LABEL + "," + mCubeEdgeX);
 	WriteToFile.appendNewLine();
-	WriteToFile.write(MonteCarloHysteresisPanel.DIMENSIONS_Y_AXIS_LABEL + ","  + cubeEdgeY);
+	WriteToFile.write(MonteCarloHysteresisPanel.DIMENSIONS_Y_AXIS_LABEL + ","  + mCubeEdgeY);
 	WriteToFile.appendNewLine();
-	WriteToFile.write(MonteCarloHysteresisPanel.DIMENSIONS_Z_AXIS_LABEL + ","  + cubeEdgeZ);
+	WriteToFile.write(MonteCarloHysteresisPanel.DIMENSIONS_Z_AXIS_LABEL + ","  + mCubeEdgeZ);
 	WriteToFile.appendNewLine();
 	WriteToFile.write(MonteCarloHysteresisPanel.DIPOLE_RADIUS_LABEL + "," + magneticCube.getDipoleRadius());
 	WriteToFile.appendNewLine();
