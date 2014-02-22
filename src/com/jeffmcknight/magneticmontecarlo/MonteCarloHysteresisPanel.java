@@ -44,10 +44,12 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
    public static final String DIPOLE_RADIUS_LABEL = "Dipole radius [um]:               ";
    public static final String PACKING_FRACTION_LABEL = "Packing Fraction:                  ";
    public static final String RECORDING_PASSES_LABEL = "Number of Recording Passes:  ";
+   public static final String APPLIED_FIELD_RANGE_LABEL = "Maximum Applied Field (H)";
    private static final String RUN_SIMULATION = "run_simulation";
    final static String[] LATTICE_ITEMS = {"1","2","3","4","5","6","7","8","9","10"};
    final static String[] PACKING_FRACTION_OPTIONS = {"1.0","0.9","0.8","0.7","0.6","0.5","0.4","0.3","0.2","0.1"};
    final static String[] DIPOLE_RADIUS_OPTIONS = {"0.1","0.2","0.3","0.4","0.5","0.6","0.7","0.8","0.9","1.0","1.1","1.2","1.3","1.4","1.5","1.6","1.7","1.8","1.9","2.0"};
+   final static String[] H_FIELD_RANGE_ITEMS = {"10","20","30","40","50","60","70","80","90","100"};
    static int   intNumberCurves   = 1;
    public int   numberRecordPoints;
    private CurveFamily mhCurves;
@@ -69,6 +71,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
    private float traceHue = 0f;
    private int traceNumber;
    private ITrace2D mTrace;
+private JComboBox mAppliedFieldRangeList;
    
    public interface CurveUpdateListener{
       
@@ -111,6 +114,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         dipoleRadiusList = new JComboBox(DIPOLE_RADIUS_OPTIONS);
         packingFractionList = new JComboBox(PACKING_FRACTION_OPTIONS);
         recordCountList = new JComboBox(LATTICE_ITEMS);
+        mAppliedFieldRangeList = new JComboBox(H_FIELD_RANGE_ITEMS);
 
         // Create combo box panels for lattice dimensions
         JPanel xComboBoxPanel = buildComboBoxPanel(initialComboIndex, DIMENSIONS_X_AXIS_LABEL, mXComboBox);
@@ -119,6 +123,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         JPanel dipoleRadiusPanel = buildComboBoxPanel(3, DIPOLE_RADIUS_LABEL, dipoleRadiusList);
         JPanel packingFractionPanel = buildComboBoxPanel(1, PACKING_FRACTION_LABEL, packingFractionList);
         JPanel recordCountPanel = buildComboBoxPanel(0, RECORDING_PASSES_LABEL, recordCountList);
+        JPanel mAppliedFieldRangePanel = buildComboBoxPanel(6, APPLIED_FIELD_RANGE_LABEL, mAppliedFieldRangeList);
 
         // Add combo box panels for lattice dimensions
         comboBoxPanel.add(xComboBoxPanel);
@@ -130,6 +135,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         comboBoxPanel.add(dipoleRadiusPanel);
         comboBoxPanel.add(packingFractionPanel);
         comboBoxPanel.add(recordCountPanel);
+        comboBoxPanel.add(mAppliedFieldRangePanel);
         
         // Add vertical space between combo buttons and run JButton
         comboBoxPanel.add(Box.createRigidArea(new Dimension(0, 20)));	
@@ -205,6 +211,8 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         System.out.println("packingFraction: " + packingFraction);
         int recordCount = Integer.parseInt((String) recordCountList.getSelectedItem());
         System.out.println("recordCount: " + recordCount);
+        float maxAppliedField = Float.parseFloat((String) mAppliedFieldRangeList.getSelectedItem());
+        System.out.println("maxAppliedField: " + maxAppliedField);
 
         // Run simulation if run button is clicked
 		if ( e.getActionCommand().equals(RUN_SIMULATION) ) 
