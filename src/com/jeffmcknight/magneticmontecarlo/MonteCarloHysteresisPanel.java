@@ -34,10 +34,11 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
     * 
     */
    private static final long serialVersionUID = 5824180412325621552L;
-   private static final int DEFAULT_BORDER_SPACE = 30;
+   public static final int DEFAULT_BORDER_SPACE = 30;
+   public static final int DEFAULT_APPLIED_FIELD_ITEM = 4;
    public static final float SATURATION_M    = 100.0f;
    public static final float DEFAULT_INDEX_A  = 1.0f;
-   private static final String CURVE_NAME = "Curve #";
+   public static final String CURVE_NAME = "Curve #";
    public static final String DIMENSIONS_X_AXIS_LABEL = "Lattice dimensions (X-axis):  ";
    public static final String DIMENSIONS_Y_AXIS_LABEL = "Lattice dimensions (Y-axis):  ";
    public static final String DIMENSIONS_Z_AXIS_LABEL = "Lattice dimensions (Z-axis):  ";
@@ -123,7 +124,7 @@ private JComboBox mAppliedFieldRangeList;
         JPanel dipoleRadiusPanel = buildComboBoxPanel(3, DIPOLE_RADIUS_LABEL, dipoleRadiusList);
         JPanel packingFractionPanel = buildComboBoxPanel(1, PACKING_FRACTION_LABEL, packingFractionList);
         JPanel recordCountPanel = buildComboBoxPanel(0, RECORDING_PASSES_LABEL, recordCountList);
-        JPanel mAppliedFieldRangePanel = buildComboBoxPanel(6, APPLIED_FIELD_RANGE_LABEL, mAppliedFieldRangeList);
+        JPanel mAppliedFieldRangePanel = buildComboBoxPanel(DEFAULT_APPLIED_FIELD_ITEM, APPLIED_FIELD_RANGE_LABEL, mAppliedFieldRangeList);
 
         // Add combo box panels for lattice dimensions
         comboBoxPanel.add(xComboBoxPanel);
@@ -217,7 +218,7 @@ private JComboBox mAppliedFieldRangeList;
         // Run simulation if run button is clicked
 		if ( e.getActionCommand().equals(RUN_SIMULATION) ) 
 		{
-			mhCurves = new CurveFamily(recordCount, xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius);
+			mhCurves = new CurveFamily(recordCount, xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius, maxAppliedField);
 			
 			float recordedNetMNegative[][] = new float[numberRecordPoints][recordCount];
 			float recordedNetMPositive[][] = new float[numberRecordPoints][recordCount];
