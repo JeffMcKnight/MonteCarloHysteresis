@@ -23,15 +23,17 @@ public class CurveFamily
 	public static final float DEFAULT_LATTICE_CONSTANT = 1.0f;
 	public static final float DEFAULT_PACKING_FRACTION = 1.0f;
 	public static final float SATURATION_M = 100.0f;
-	public static final float MAXIMUM_H = 75.0f;
+	public static final float DEFAULT_MAXIMUM_H = 75.0f;
+	public static final float DEFAULT_MINIMUM_H = 0;
 
-	public int   curveCount;
-	public int   numberRecordPoints;
-	public int   mCubeEdgeX;
-	public int   mCubeEdgeY;
-	public int   mCubeEdgeZ;
+	private int   curveCount;
+	private int   numberRecordPoints;
+	private int   mCubeEdgeX;
+	private int   mCubeEdgeY;
+	private int   mCubeEdgeZ;
 //	private float defaultDipoleRadius = 0.000001f;
 	private float latticeConst = DEFAULT_LATTICE_CONSTANT;
+	private float mMaxH;
 	
 	MagneticMedia magneticCube;
 	HysteresisCurve[] mhCurveSet;
@@ -60,12 +62,12 @@ public class CurveFamily
 		mCubeEdgeZ       = 10;
 		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, DEFAULT_PACKING_FRACTION, DEFAULT_DIPOLE_RADIUS);
 		mhCurveSet = new  HysteresisCurve[count];
-		averageMCurve = new HysteresisCurve(MAXIMUM_H, DEFAULT_RECORD_STEP_SIZE);
+		averageMCurve = new HysteresisCurve(DEFAULT_MINIMUM_H, DEFAULT_MAXIMUM_H, DEFAULT_RECORD_STEP_SIZE);
 	}
 
-	public CurveFamily(int count, int xDim, int yDim, int zDim, float packingFraction, float dipoleRadius) 
+	public CurveFamily(int count, int xDim, int yDim, int zDim, float packingFraction, float dipoleRadius, float maximumH) 
 	{
-		numberRecordPoints   = (int) (2*(MAXIMUM_H/DEFAULT_RECORD_STEP_SIZE) + 1);
+		numberRecordPoints   = (int) (2*(DEFAULT_MAXIMUM_H/DEFAULT_RECORD_STEP_SIZE) + 1);
 		curveCount = count;
 		mCubeEdgeX       = xDim;
 		mCubeEdgeY       = yDim;
@@ -73,14 +75,15 @@ public class CurveFamily
 		mPackingFraction = packingFraction;
 		mDipoleRadius = dipoleRadius;
 		latticeConst = 2f * dipoleRadius / packingFraction ; 
+		mMaxH = maximumH;  
 		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, packingFraction, dipoleRadius);
-		averageMCurve = new HysteresisCurve(MAXIMUM_H, DEFAULT_RECORD_STEP_SIZE);
-		minMCurve     = new HysteresisCurve(MAXIMUM_H, DEFAULT_RECORD_STEP_SIZE);
-		maxMCurve     = new HysteresisCurve(MAXIMUM_H, DEFAULT_RECORD_STEP_SIZE);
+		averageMCurve = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, DEFAULT_RECORD_STEP_SIZE);
+		minMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, DEFAULT_RECORD_STEP_SIZE);
+		maxMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, DEFAULT_RECORD_STEP_SIZE);
 		mhCurveSet = new  HysteresisCurve[curveCount];
 		for (int i = 0; i < mhCurveSet.length; i++) 
 		{
-			mhCurveSet[i] = new HysteresisCurve(MAXIMUM_H, DEFAULT_RECORD_STEP_SIZE);
+			mhCurveSet[i] = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, DEFAULT_RECORD_STEP_SIZE);
 		}
 	}
 

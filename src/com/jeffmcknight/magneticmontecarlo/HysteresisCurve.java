@@ -10,26 +10,24 @@ package com.jeffmcknight.magneticmontecarlo;
  */
 public class HysteresisCurve 
 {
-	int length;
 	RecordPoint[] dipoleSet;
 
-	//******************** HysteresisCurve() ********************
+	//******************** HysteresisCurve() -- Constructor ********************
 	/**
-	 * 
+	 * Constructor - three-parameter
+	 * @param hMin - the minimum applied DC field (Hdc)
+	 * @param hMax - the maximum applied DC field (Hdc)
+	 * @param stepSize
 	 */
-	public HysteresisCurve(float hMax, float stepSize) 
-	{
-		int positivePointCount = (int)(hMax/stepSize);
-		float appliedH;
-		length = ( (2*positivePointCount)+1 );
-		dipoleSet = new RecordPoint[length] ;
+	public HysteresisCurve(float hMin, float hMax, float stepSize) {
+		int pointCount = (int)((hMax-hMin)/stepSize);
+		dipoleSet = new RecordPoint[pointCount + 1] ;
 		for (int i = 0; i < dipoleSet.length; i++) 
 		{
-			appliedH = stepSize*(i - positivePointCount);
+			float appliedH = (stepSize*i)  + hMin;
 			dipoleSet[i] = new RecordPoint(appliedH);
-//			dipoleSet[i].setH(stepSize*(i - positivePointCount));
 		}
-	} // END ******************** HysteresisCurve() ********************
+	}
 	
 	//******************** getDipoleSet() ********************
 	public RecordPoint[] getDipoleSet() 
@@ -52,13 +50,7 @@ public class HysteresisCurve
 	//******************** getLength() ********************
 	public int getLength() 
 	{
-		return length;
-	}
-
-	//******************** setLength() ********************
-	public void setLength(int length) 
-	{
-		this.length = length;
+		return dipoleSet.length;
 	}
 
 //	//******************** getM() ********************
