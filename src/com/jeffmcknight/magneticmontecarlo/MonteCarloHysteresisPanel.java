@@ -19,11 +19,13 @@ import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
 import javax.swing.SwingConstants;
 
@@ -46,6 +48,8 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
    public static final String PACKING_FRACTION_LABEL = "Packing Fraction:                  ";
    public static final String RECORDING_PASSES_LABEL = "Number of Recording Passes:  ";
    public static final String APPLIED_FIELD_RANGE_LABEL = "Maximum Applied Field (H)";
+   public static final String CURVE_BUTTON_TEXT = "Show M-H Curve";
+   public static final String DIPOLE_BUTTON_TEXT = "Show Dipole";
    private static final String RUN_SIMULATION = "run_simulation";
    final static String[] LATTICE_ITEMS = {"1","2","3","4","5","6","7","8","9","10"};
    final static String[] PACKING_FRACTION_OPTIONS = {"1.0","0.9","0.8","0.7","0.6","0.5","0.4","0.3","0.2","0.1"};
@@ -60,19 +64,22 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
    private JComboBox mYComboBox;
    private JComboBox mZComboBox;
    private JComboBox dipoleRadiusList;
-   private JComboBox packingFractionList;
-   private JComboBox recordCountList;
+   private JComboBox mPackingFractionBox;
+   private JComboBox mRecordCountBox;
+   private JComboBox mAppliedFieldRangeBox;
+   private JRadioButton mCurveRadioButton;
+   private ButtonGroup mRadioButtonGroup;
+   private JRadioButton mDipoleRadioButton;
 
    private Chart2D mhChart;
     // Create a frame.
    JFrame chartFrame;
-   private JPanel chartPanel;
-   private JPanel comboBoxPanel;
+   private JPanel mChartPanel;
+   private JPanel mControlsPanel;
    private Color traceColor = new Color(255,0,0);
    private float traceHue = 0f;
    private int traceNumber;
    private ITrace2D mTrace;
-private JComboBox mAppliedFieldRangeList;
    
    public interface CurveUpdateListener{
       
@@ -86,17 +93,17 @@ private JComboBox mAppliedFieldRangeList;
         // Create a frame.
         this.setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
         
-        comboBoxPanel = new JPanel();
-        comboBoxPanel.setLayout(new BoxLayout(comboBoxPanel, BoxLayout.PAGE_AXIS));
-        this.add(comboBoxPanel);
+        mControlsPanel = new JPanel();
+        mControlsPanel.setLayout(new BoxLayout(mControlsPanel, BoxLayout.PAGE_AXIS));
+        this.add(mControlsPanel);
         
-        chartPanel = new JPanel();
-        chartPanel.setLayout(new BoxLayout(chartPanel, BoxLayout.X_AXIS));
-        this.add(chartPanel);
+        mChartPanel = new JPanel();
+        mChartPanel.setLayout(new BoxLayout(mChartPanel, BoxLayout.X_AXIS));
+        this.add(mChartPanel);
         
         buildRunConfigPanel();
 
-        showChart(chartPanel);
+        showChart(mChartPanel);
     } // END constructor
 
    // *************** buildRunConfigPanel() ***************
@@ -113,37 +120,55 @@ private JComboBox mAppliedFieldRangeList;
         mYComboBox = new JComboBox(LATTICE_ITEMS);
         mZComboBox = new JComboBox(LATTICE_ITEMS);
         dipoleRadiusList = new JComboBox(DIPOLE_RADIUS_OPTIONS);
-        packingFractionList = new JComboBox(PACKING_FRACTION_OPTIONS);
-        recordCountList = new JComboBox(LATTICE_ITEMS);
-        mAppliedFieldRangeList = new JComboBox(H_FIELD_RANGE_ITEMS);
+        mPackingFractionBox = new JComboBox(PACKING_FRACTION_OPTIONS);
+        mRecordCountBox = new JComboBox(LATTICE_ITEMS);
+        mAppliedFieldRangeBox = new JComboBox(H_FIELD_RANGE_ITEMS);
+
+        mCurveRadioButton = new JRadioButton();
+        mCurveRadioButton.setText(CURVE_BUTTON_TEXT);
+        mCurveRadioButton.setSelected(true);
+        
+        mDipoleRadioButton = new JRadioButton();
+        mDipoleRadioButton.setText(DIPOLE_BUTTON_TEXT);
+
+        mRadioButtonGroup = new ButtonGroup();
+        mRadioButtonGroup.add(mCurveRadioButton);
+        mRadioButtonGroup.add(mDipoleRadioButton);
 
         // Create combo box panels for lattice dimensions
         JPanel xComboBoxPanel = buildComboBoxPanel(initialComboIndex, DIMENSIONS_X_AXIS_LABEL, mXComboBox);
         JPanel yComboBoxPanel = buildComboBoxPanel(initialComboIndex, DIMENSIONS_Y_AXIS_LABEL, mYComboBox);
         JPanel zComboBoxPanel = buildComboBoxPanel(initialComboIndex, DIMENSIONS_Z_AXIS_LABEL, mZComboBox);
         JPanel dipoleRadiusPanel = buildComboBoxPanel(3, DIPOLE_RADIUS_LABEL, dipoleRadiusList);
-        JPanel packingFractionPanel = buildComboBoxPanel(1, PACKING_FRACTION_LABEL, packingFractionList);
-        JPanel recordCountPanel = buildComboBoxPanel(0, RECORDING_PASSES_LABEL, recordCountList);
-        JPanel mAppliedFieldRangePanel = buildComboBoxPanel(DEFAULT_APPLIED_FIELD_ITEM, APPLIED_FIELD_RANGE_LABEL, mAppliedFieldRangeList);
+        JPanel packingFractionPanel = buildComboBoxPanel(1, PACKING_FRACTION_LABEL, mPackingFractionBox);
+        JPanel recordCountPanel = buildComboBoxPanel(0, RECORDING_PASSES_LABEL, mRecordCountBox);
+        JPanel mAppliedFieldRangePanel = buildComboBoxPanel(DEFAULT_APPLIED_FIELD_ITEM, APPLIED_FIELD_RANGE_LABEL, mAppliedFieldRangeBox);
+        JPanel mRadioButtonPanel = buildButtonPanel(mRadioButtonGroup);
 
         // Add combo box panels for lattice dimensions
-        comboBoxPanel.add(xComboBoxPanel);
-        comboBoxPanel.add(yComboBoxPanel);
-        comboBoxPanel.add(zComboBoxPanel);
+        mControlsPanel.add(xComboBoxPanel);
+        mControlsPanel.add(yComboBoxPanel);
+        mControlsPanel.add(zComboBoxPanel);
         // Add separator line 
-        comboBoxPanel.add(new JSeparator(SwingConstants.HORIZONTAL));
+        mControlsPanel.add(new JSeparator(SwingConstants.HORIZONTAL));
         // Add combo box panels for dipole radius, packing fraction, et
-        comboBoxPanel.add(dipoleRadiusPanel);
-        comboBoxPanel.add(packingFractionPanel);
-        comboBoxPanel.add(recordCountPanel);
-        comboBoxPanel.add(mAppliedFieldRangePanel);
+        mControlsPanel.add(dipoleRadiusPanel);
+        mControlsPanel.add(packingFractionPanel);
+        mControlsPanel.add(recordCountPanel);
+        mControlsPanel.add(mAppliedFieldRangePanel);
         
-        // Add vertical space between combo buttons and run JButton
-        comboBoxPanel.add(Box.createRigidArea(new Dimension(0, 20)));	
+        // Add vertical space between combo buttons and radio buttons
+        mControlsPanel.add(Box.createRigidArea(new Dimension(0, 20)));	
+        
+        mControlsPanel.add(mCurveRadioButton);
+        mControlsPanel.add(mDipoleRadioButton);
+
+        // Add vertical space between radio buttons and run JButton
+        mControlsPanel.add(Box.createRigidArea(new Dimension(0, 20)));	
 
         // Add run JButton
         JButton buttonRun;
-        buttonRun= new JButton("Run");
+        buttonRun = new JButton("Run");
         buttonRun.setVerticalTextPosition(AbstractButton.CENTER);
         buttonRun.setHorizontalTextPosition(AbstractButton.CENTER); //aka LEFT, for left-to-right locales
         buttonRun.setMnemonic(KeyEvent.VK_R);
@@ -155,9 +180,9 @@ private JComboBox mAppliedFieldRangeList;
         buttonRunPanel.add(buttonRun);  					// add button to panel
         buttonRunPanel.setAlignmentX(LEFT_ALIGNMENT);
         buttonRun.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        comboBoxPanel.add(buttonRunPanel);
+        mControlsPanel.add(buttonRunPanel);
         
-        comboBoxPanel.add(Box.createVerticalStrut(300));
+        mControlsPanel.add(Box.createVerticalStrut(300));
 
         // Add border padding around entire panel
         setBorder(BorderFactory.createEmptyBorder(
@@ -166,10 +191,16 @@ private JComboBox mAppliedFieldRangeList;
         		DEFAULT_BORDER_SPACE,
         		DEFAULT_BORDER_SPACE));
         
-        comboBoxPanel.setMaximumSize(new Dimension(200,600));
+        mControlsPanel.setMaximumSize(new Dimension(200,600));
    }
 
-   // *************** () ***************
+// *************** buildButtonPanel() ***************
+   private JPanel buildButtonPanel(ButtonGroup buttonGroup) {
+	   JPanel panel = new JPanel();
+	   return panel;
+}
+
+// *************** buildComboBoxPanel() ***************
    /**
     * @param initialComboIndex
     * @param label TODO
@@ -208,11 +239,11 @@ private JComboBox mAppliedFieldRangeList;
         System.out.println("zAxisCount: " + zAxisCount);
         float dipoleRadius = Float.parseFloat((String) dipoleRadiusList.getSelectedItem());
         System.out.println("dipoleRadius: " + dipoleRadius);
-        float packingFraction = Float.parseFloat((String) packingFractionList.getSelectedItem());
+        float packingFraction = Float.parseFloat((String) mPackingFractionBox.getSelectedItem());
         System.out.println("packingFraction: " + packingFraction);
-        int recordCount = Integer.parseInt((String) recordCountList.getSelectedItem());
+        int recordCount = Integer.parseInt((String) mRecordCountBox.getSelectedItem());
         System.out.println("recordCount: " + recordCount);
-        float maxAppliedField = Float.parseFloat((String) mAppliedFieldRangeList.getSelectedItem());
+        float maxAppliedField = Float.parseFloat((String) mAppliedFieldRangeBox.getSelectedItem());
         System.out.println("maxAppliedField: " + maxAppliedField);
 
         // Run simulation if run button is clicked
