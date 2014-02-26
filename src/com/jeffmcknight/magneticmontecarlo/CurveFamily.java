@@ -4,7 +4,6 @@
 package com.jeffmcknight.magneticmontecarlo;
 
 import java.io.File;
-import java.sql.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -35,7 +34,7 @@ public class CurveFamily
 	private float latticeConst = DEFAULT_LATTICE_CONSTANT;
 	private float mMaxH;
 	
-	MagneticMedia magneticCube;
+	private MagneticMedia magneticCube;
 	HysteresisCurve[] mhCurveSet;
 	HysteresisCurve averageMCurve;
 	HysteresisCurve minMCurve;
@@ -102,27 +101,27 @@ public class CurveFamily
 	}
 
 	// ******************** getcubeEdgeX() ********************
-   // @return cubeEdgeX
+   // @return mCubeEdgeX
    int getCubeEdgeX()
    {
       return mCubeEdgeX;
    }
 
-   // ******************** getcubeEdgeY() ********************
-   // @return cubeEdgeY
+   // ******************** getCubeEdgeY() ********************
+   // @return mCubeEdgeY
    int getCubeEdgeY()
    {
       return mCubeEdgeY;
    }
 
-   // ******************** getcubeEdgeZ() ********************
+   // ******************** getCubeEdgeZ() ********************
    // @return cubeEdgeZ
    int getCubeEdgeZ()
    {
       return mCubeEdgeZ;
    }
 
-   // ******************** getmDipoleRadius() ********************
+   // ******************** getDipoleRadius() ********************
    // @return mDipoleRadius
    float getDipoleRadius()
    {
@@ -136,7 +135,15 @@ public class CurveFamily
       return latticeConst;
    }
 
-   /**
+   public MagneticMedia getMagneticCube() {
+	return magneticCube;
+}
+
+public void setMagneticCube(MagneticMedia magneticCube) {
+	this.magneticCube = magneticCube;
+}
+
+/**
 	 * @return the minMCurve
 	 */
 	protected HysteresisCurve getMinMCurve()
@@ -155,7 +162,7 @@ public class CurveFamily
 	/**
 	 * @return the mhCurveSet
 	 */
-	protected HysteresisCurve[] getMhCurveSet()
+	HysteresisCurve[] getMhCurveSet()
 	{
 		return mhCurveSet;
 	}

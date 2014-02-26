@@ -40,7 +40,8 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
    public static final int DEFAULT_APPLIED_FIELD_ITEM = 4;
    public static final float SATURATION_M    = 100.0f;
    public static final float DEFAULT_INDEX_A  = 1.0f;
-   public static final String CURVE_NAME = "Curve #";
+   public static final String CURVE_CHART_TITLE = "Curve #";
+   public static final String DIPOLE_CHART_TITLE = "Dipole Set #";
    public static final String DIMENSIONS_X_AXIS_LABEL = "Lattice dimensions (X-axis):  ";
    public static final String DIMENSIONS_Y_AXIS_LABEL = "Lattice dimensions (Y-axis):  ";
    public static final String DIMENSIONS_Z_AXIS_LABEL = "Lattice dimensions (Z-axis):  ";
@@ -73,12 +74,13 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
 
    private Chart2D mhChart;
     // Create a frame.
+   private int mCurveTraceCount;
+   private int mDipoleTraceCount;
    JFrame chartFrame;
    private JPanel mChartPanel;
    private JPanel mControlsPanel;
    private Color traceColor = new Color(255,0,0);
    private float traceHue = 0f;
-   private int traceNumber;
    private ITrace2D mTrace;
    
    public interface CurveUpdateListener{
@@ -87,6 +89,8 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
 
     public MonteCarloHysteresisPanel() 
     {
+    	mCurveTraceCount = 0;
+    	mDipoleTraceCount = 0;
     	numberRecordPoints = CurveFamily.getDefaultRecordPoints();
         // Create a chart:  
         mhChart = new Chart2D();
@@ -162,6 +166,18 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         
         mControlsPanel.add(mCurveRadioButton);
         mControlsPanel.add(mDipoleRadioButton);
+        mCurveRadioButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				showMhCurveChart();
+			}
+		});
+        mDipoleRadioButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				showDipoleChart();
+			}
+		});
 
         // Add vertical space between radio buttons and run JButton
         mControlsPanel.add(Box.createRigidArea(new Dimension(0, 20)));	
@@ -193,6 +209,61 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         
         mControlsPanel.setMaximumSize(new Dimension(200,600));
    }
+
+protected void showDipoleChart() {
+	mhChart.removeAllTraces();
+	addDipolePoints(mhCurves, mTrace, mhChart);
+}
+
+private void addDipolePoints(CurveFamily chartCurves, ITrace2D trace, Chart2D chart2d) {
+    // Increment the count and update the color 
+    // to display multiple traces on the same chart.
+	int fastAveragePeriod = (int) (0.2 * chartCurves.getMagneticCube().size());
+    mDipoleTraceCount = mDipoleTraceCount  + 1;
+    traceColor = Color.getHSBColor(traceHue, 1f, 0.85f);
+    traceHue = (traceHue + 0.22f);
+    String traceName = new StringBuilder(DIPOLE_CHART_TITLE)
+    .append(String.valueOf(mDipoleTraceCount))
+    .append(" : ")
+    .append(mhCurves.getCubeEdgeX())
+    .append("x")
+    .append(mhCurves.getCubeEdgeY())
+    .append("x")
+    .append(mhCurves.getCubeEdgeZ())
+    .append(" - Packing Fraction: ")
+    .append(mhCurves.getPackingFraction())
+    .append(" - Radius [um]: ")
+    .append(mhCurves.getDipoleRadius())
+    .append(" - Average over [dipoles]: ")
+    .append(String.valueOf(fastAveragePeriod))
+    .toString();
+    
+    trace = new Trace2DSimple(); 
+    // Set trace properties (name, color, point shape to disc) 
+    trace.setName(traceName);
+    trace.setColor(traceColor);
+    trace.setTracePainter(new TracePainterDisc());
+    // Add the trace to the chart. This has to be done before adding points (deadlock prevention): 
+    chart2d.addTrace(trace);    
+
+    for(int i=0; i<chartCurves.getMagneticCube().size(); i++)
+  	{
+    	float intermediateNetM = 0;
+    	int dipoleCount = 0;
+    	for (int j=Math.max(0, i-fastAveragePeriod); j<i+1; j++){
+    		intermediateNetM += chartCurves.getMagneticCube().get(j).getM();
+    		dipoleCount++;
+    	}
+    	System.out.println("i: " + i + "\t -- intermediateNetM: " + intermediateNetM + "\t -- get(i).getM(): " + chartCurves.getMagneticCube().get(i).getM());
+//  		trace.addPoint(i, chartCurves.getMagneticCube().get(i).getM());
+  		trace.addPoint(i, intermediateNetM/dipoleCount);
+  	}
+}
+
+protected void showMhCurveChart() {
+	mhChart.removeAllTraces();
+	addMhPoints(mhCurves, mTrace);
+}
 
 // *************** buildButtonPanel() ***************
    private JPanel buildButtonPanel(ButtonGroup buttonGroup) {
@@ -257,7 +328,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
 			mhCurves.recordMHCurves(recordedNetMNegative, recordedNetMPositive);
 //			mhCurves.writeCurvesToFile();
 			
-	      addAllPoints(mhCurves, mTrace);
+	      addMhPoints(mhCurves, mTrace);
 		}
         
     } // END ******************** actionPerformed() ********************
@@ -305,19 +376,19 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
        panel.setVisible(true);
     }
 
-   // *************** () ***************
+   // *************** addAllPoints() ***************
    /**
     * @param chartCurves
     * @param trace
     */
-   public void addAllPoints(CurveFamily chartCurves, ITrace2D trace)
+   public void addMhPoints(CurveFamily chartCurves, ITrace2D trace)
    {
       // Increment the count and update the color 
       // to display multiple traces on the same chart.
-      traceNumber = traceNumber  + 1;
+      mCurveTraceCount = mCurveTraceCount  + 1;
       traceColor = Color.getHSBColor(traceHue, 1f, 0.85f);
       traceHue = (traceHue + 0.22f);
-      String traceName = new StringBuilder(CURVE_NAME + traceNumber)
+      String traceName = new StringBuilder(CURVE_CHART_TITLE + mCurveTraceCount)
       .append(" : ")
       .append(mhCurves.getCubeEdgeX())
       .append("x")
