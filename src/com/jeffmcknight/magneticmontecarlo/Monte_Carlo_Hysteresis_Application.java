@@ -30,27 +30,28 @@ public class Monte_Carlo_Hysteresis_Application extends JFrame
    /**
     * 
     */
-   public static final String VERSION_NUMBER = "0.8.1";
-   public static final String VERSION_SUFFIX = "0-8-1";
+   public static final String VERSION_NUMBER = "0.8.2";
+   public static final String VERSION_SUFFIX = "0-8-2";
    public static final String TAG = Monte_Carlo_Hysteresis_Application.class.getSimpleName();
    private static final long serialVersionUID = 5700991704955056064L;
    public static final String TITLE_BAR_TEXT = "Monte Carlo Hysteresis " + VERSION_NUMBER;
-   private static final String OS_NAME_PROPERTY = "os.name";
-   private static final String SYSTEM_NAME_LINUX = "Linux";
-   private static final String SYSTEM_NAME_OS_X = "Mac OS X";
-   private static final String SYSTEM_NAME_WINDOWS = "Windows";
-   private static final String FILE_MENU_NAME = "File";
-   private static final String EXPORT_MENU_ITEM_NAME = "Export";
-   private static final String QUIT_MENU_ITEM_NAME = "Quit";
-   private static final String SAVE_MENU_ITEM_NAME = "Save";
-   private static final String MENU_ITEM = "menu item";
-   private static final String EXPORT_MENU_ITEM_DESCRIPTION = EXPORT_MENU_ITEM_NAME+" "+MENU_ITEM;
-   private static final String QUIT_MENU_ITEM_DESCRIPTION = QUIT_MENU_ITEM_NAME+" "+MENU_ITEM;;
-   private static final String SAVE_MENU_ITEM_DESCRIPTION = SAVE_MENU_ITEM_NAME+" "+MENU_ITEM;
+   public static final String OS_NAME_PROPERTY = "os.name";
+   public static final String SYSTEM_NAME_LINUX = "Linux";
+   public static final String SYSTEM_NAME_OS_X = "Mac OS X";
+   public static final String SYSTEM_NAME_WINDOWS = "Windows";
+   public static final String FILE_MENU_NAME = "File";
+   public static final String EXPORT_MENU_ITEM_NAME = "Export";
+   public static final String QUIT_MENU_ITEM_NAME = "Quit";
+   public static final String SAVE_MENU_ITEM_NAME = "Save";
+   public static final String MENU_ITEM = "menu item";
+   public static final String EXPORT_MENU_ITEM_DESCRIPTION = EXPORT_MENU_ITEM_NAME+" "+MENU_ITEM;
+   public static final String QUIT_MENU_ITEM_DESCRIPTION = QUIT_MENU_ITEM_NAME+" "+MENU_ITEM;;
+   public static final String SAVE_MENU_ITEM_DESCRIPTION = SAVE_MENU_ITEM_NAME+" "+MENU_ITEM;
 
+   private int mPrimaryModifierKey;
    private OperatingSystem mOperatingSystem;
    private JMenuBar mMenuBar;
-	private JMenu mFileMenu;
+   private JMenu mFileMenu;
    private JMenuItem mExportMenuItem;
    private JMenuItem mQuitMenuItem;
    private JMenuItem mSaveMenuItem;
@@ -62,32 +63,50 @@ public class Monte_Carlo_Hysteresis_Application extends JFrame
    }
 
 	/**
+	 * Constructor - zero argument
 	 * @throws HeadlessException
 	 */
-	public Monte_Carlo_Hysteresis_Application() throws HeadlessException 
-	{
-	   setOs(System.getProperty(OS_NAME_PROPERTY));
+   public Monte_Carlo_Hysteresis_Application() throws HeadlessException 
+   {
+	   mOperatingSystem = typeOfOperatingSystem(System.getProperty(OS_NAME_PROPERTY));
+	   mPrimaryModifierKey = assignPrimaryModifierKey(mOperatingSystem);
 	   buildFileMenu(); 
 	   buildPanel();
+   }
+
+	/**
+	 * 
+	 */
+	private int assignPrimaryModifierKey(OperatingSystem operatingSystem) {
+		switch (operatingSystem) {
+		   case MacOSX:
+			   return ActionEvent.META_MASK;
+		   case Windows:
+			   return ActionEvent.CTRL_MASK;
+		   default:
+			   return ActionEvent.CTRL_MASK;
+		   }
 	}
 
    // *************** () ***************
    /**
     * @param osName TODO
+ * @return 
     */
-   public void setOs(String osName)
+   public OperatingSystem typeOfOperatingSystem(String osName)
    {
+	   OperatingSystem operatingSystem;
       if (osName.equals(SYSTEM_NAME_OS_X))
-         mOperatingSystem = OperatingSystem.MacOSX;
-      else if (osName.equals(SYSTEM_NAME_WINDOWS))
-         mOperatingSystem = OperatingSystem.Windows;
-      else if (osName.equals(SYSTEM_NAME_LINUX))
-         mOperatingSystem = OperatingSystem.Linux;
+    	  operatingSystem = OperatingSystem.MacOSX;
+      else if (osName.startsWith(SYSTEM_NAME_WINDOWS))
+    	  operatingSystem = OperatingSystem.Windows;
+      else if (osName.startsWith(SYSTEM_NAME_LINUX))
+    	  operatingSystem = OperatingSystem.Linux;
       else 
-         mOperatingSystem = OperatingSystem.Unknown;
+    	  operatingSystem = OperatingSystem.Unknown;
          
-	   System.out.println(OS_NAME_PROPERTY+": "+mOperatingSystem);
-//	   System.out.println((mOsName=)?:);
+	   System.out.println(OS_NAME_PROPERTY+": "+operatingSystem);
+	   return operatingSystem;
    }
 
    // *************** buildFileMenu() ***************
@@ -106,9 +125,8 @@ public class Monte_Carlo_Hysteresis_Application extends JFrame
 
 	   //the Save JMenuItem
 	   mSaveMenuItem = new JMenuItem(SAVE_MENU_ITEM_NAME, KeyEvent.VK_S);
-//	   mSaveMenuItem.setEnabled(false);
 	   mSaveMenuItem.setAccelerator(KeyStroke.getKeyStroke(
-	         KeyEvent.VK_S, ActionEvent.META_MASK));
+	         KeyEvent.VK_S, mPrimaryModifierKey));
 	   mSaveMenuItem.getAccessibleContext().setAccessibleDescription(SAVE_MENU_ITEM_DESCRIPTION);
 	   mSaveMenuItem.addActionListener(new ActionListener()
       {
@@ -155,7 +173,7 @@ public class Monte_Carlo_Hysteresis_Application extends JFrame
       //the Export JMenuItem
      mExportMenuItem = new JMenuItem(EXPORT_MENU_ITEM_NAME, KeyEvent.VK_E);
      mExportMenuItem.setAccelerator(KeyStroke.getKeyStroke(
-             KeyEvent.VK_E, ActionEvent.META_MASK));
+             KeyEvent.VK_E, mPrimaryModifierKey));
      mExportMenuItem.getAccessibleContext().setAccessibleDescription(EXPORT_MENU_ITEM_DESCRIPTION);
      mFileMenu.add(mExportMenuItem);
      
@@ -165,43 +183,13 @@ public class Monte_Carlo_Hysteresis_Application extends JFrame
      //the Quit JMenuItem
     mQuitMenuItem = new JMenuItem(QUIT_MENU_ITEM_NAME, KeyEvent.VK_Q);
     mQuitMenuItem.setAccelerator(KeyStroke.getKeyStroke(
-            KeyEvent.VK_Q, ActionEvent.META_MASK));
+            KeyEvent.VK_Q, mPrimaryModifierKey));
     mQuitMenuItem.getAccessibleContext().setAccessibleDescription(QUIT_MENU_ITEM_DESCRIPTION);
     mFileMenu.add(mQuitMenuItem);
 
     this.setJMenuBar(mMenuBar);
    }
 
-	/**
-	 * @param arg0
-	 */
-	public Monte_Carlo_Hysteresis_Application(GraphicsConfiguration arg0) 
-	{
-		super(arg0);
-		// TODO Auto-generated constructor stub
-	}
-
-	/**
-	 * @param arg0
-	 * @throws HeadlessException
-	 */
-	public Monte_Carlo_Hysteresis_Application(String arg0)
-			throws HeadlessException 
-	{
-		super(arg0);
-		// TODO Auto-generated constructor stub
-	}
-
-	/**
-	 * @param arg0
-	 * @param arg1
-	 */
-	public Monte_Carlo_Hysteresis_Application(String arg0,
-			GraphicsConfiguration arg1) 
-	{
-		super(arg0, arg1);
-		// TODO Auto-generated constructor stub
-	}
 
 	// ******************** buildPanel() ********************
 	private void buildPanel() 
