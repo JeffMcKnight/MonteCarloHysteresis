@@ -16,7 +16,7 @@ import java.util.Calendar;
 public class CurveFamily 
 {
    public static final String TAG = CurveFamily.class.getSimpleName();
-   public static final int DEFAULT_RECORD_POINTS = 50;
+   public static final int DEFAULT_RECORD_POINTS = 15;
 	public static final int DEFAULT_RECORD_STEP_SIZE = 2;
 	public static final float DEFAULT_DIPOLE_RADIUS = 0.5f;
 	public static final float DEFAULT_LATTICE_CONSTANT = 1.0f;
@@ -76,13 +76,13 @@ public class CurveFamily
 		latticeConst = 2f * dipoleRadius / packingFraction ; 
 		mMaxH = maximumH;  
 		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, packingFraction, dipoleRadius);
-		averageMCurve = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, DEFAULT_RECORD_STEP_SIZE);
-		minMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, DEFAULT_RECORD_STEP_SIZE);
-		maxMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, DEFAULT_RECORD_STEP_SIZE);
+		averageMCurve = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
+		minMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
+		maxMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		mhCurveSet = new  HysteresisCurve[curveCount];
 		for (int i = 0; i < mhCurveSet.length; i++) 
 		{
-			mhCurveSet[i] = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, DEFAULT_RECORD_STEP_SIZE);
+			mhCurveSet[i] = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		}
 	}
 

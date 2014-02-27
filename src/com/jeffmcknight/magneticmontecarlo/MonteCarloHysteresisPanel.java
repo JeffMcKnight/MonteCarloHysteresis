@@ -14,6 +14,7 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.util.Calendar;
 
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
@@ -218,25 +219,13 @@ protected void showDipoleChart() {
 private void addDipolePoints(CurveFamily chartCurves, ITrace2D trace, Chart2D chart2d) {
     // Increment the count and update the color 
     // to display multiple traces on the same chart.
-	int fastAveragePeriod = (int) (0.2 * chartCurves.getMagneticCube().size());
+	int fastAveragePeriod = (int) (0.05 * chartCurves.getMagneticCube().size());
     mDipoleTraceCount = mDipoleTraceCount  + 1;
     traceColor = Color.getHSBColor(traceHue, 1f, 0.85f);
     traceHue = (traceHue + 0.22f);
-    String traceName = new StringBuilder(DIPOLE_CHART_TITLE)
-    .append(String.valueOf(mDipoleTraceCount))
-    .append(" : ")
-    .append(mhCurves.getCubeEdgeX())
-    .append("x")
-    .append(mhCurves.getCubeEdgeY())
-    .append("x")
-    .append(mhCurves.getCubeEdgeZ())
-    .append(" - Packing Fraction: ")
-    .append(mhCurves.getPackingFraction())
-    .append(" - Radius [um]: ")
-    .append(mhCurves.getDipoleRadius())
-    .append(" - Average over [dipoles]: ")
-    .append(String.valueOf(fastAveragePeriod))
-    .toString();
+    String traceName = buildTraceName(DIPOLE_CHART_TITLE, mDipoleTraceCount, chartCurves) 
+    		+ " - Average over [dipoles]: " 
+    		+ fastAveragePeriod;
     
     trace = new Trace2DSimple(); 
     // Set trace properties (name, color, point shape to disc) 
@@ -258,6 +247,44 @@ private void addDipolePoints(CurveFamily chartCurves, ITrace2D trace, Chart2D ch
 //  		trace.addPoint(i, chartCurves.getMagneticCube().get(i).getM());
   		trace.addPoint(i, intermediateNetM/dipoleCount);
   	}
+}
+
+/**
+ * @param title 
+ * @param fastAveragePeriod
+ * @param count TODO
+ * @param curveFamily TODO
+ * @return
+ */
+private String buildTraceName(String title, int count, CurveFamily curveFamily) {
+	Calendar calendar = Calendar.getInstance();
+    calendar.setTimeInMillis(System.currentTimeMillis());
+    String traceName = new StringBuilder(title)
+    .append(String.valueOf(count))
+    .append(" : ")
+    .append(curveFamily.getCubeEdgeX())
+    .append("x")
+    .append(curveFamily.getCubeEdgeY())
+    .append("x")
+    .append(curveFamily.getCubeEdgeZ())
+    .append(" - Packing Fraction: ")
+    .append(curveFamily.getPackingFraction())
+    .append(" - Radius [um]: ")
+    .append(curveFamily.getDipoleRadius())
+    .append(" - Date: ")
+    .append(calendar.get(Calendar.YEAR))
+    .append("-")
+    .append(calendar.get(Calendar.MONTH))
+    .append("-")
+    .append(calendar.get(Calendar.DATE))
+    .append(" T")
+    .append(calendar.get(Calendar.HOUR_OF_DAY))
+    .append(":")
+    .append(calendar.get(Calendar.MINUTE))
+    .append(":")
+    .append(calendar.get(Calendar.SECOND))
+    .toString();
+	return traceName;
 }
 
 protected void showMhCurveChart() {
@@ -388,18 +415,7 @@ protected void showMhCurveChart() {
       mCurveTraceCount = mCurveTraceCount  + 1;
       traceColor = Color.getHSBColor(traceHue, 1f, 0.85f);
       traceHue = (traceHue + 0.22f);
-      String traceName = new StringBuilder(CURVE_CHART_TITLE + mCurveTraceCount)
-      .append(" : ")
-      .append(mhCurves.getCubeEdgeX())
-      .append("x")
-      .append(mhCurves.getCubeEdgeY())
-      .append("x")
-      .append(mhCurves.getCubeEdgeZ())
-      .append(" - Packing Fraction: ")
-      .append(mhCurves.getPackingFraction())
-      .append(" - Radius [um]: ")
-      .append(mhCurves.getDipoleRadius())
-      .toString();
+      String traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, mhCurves);
       
       trace = new Trace2DSimple(); 
       // Set trace properties (name, color, point shape to disc) 
