@@ -30,8 +30,8 @@ public class Monte_Carlo_Hysteresis_Application extends JFrame
    /**
     * 
     */
-   public static final String VERSION_NUMBER = "0.8.2";
-   public static final String VERSION_SUFFIX = "0-8-2";
+   public static final String VERSION_NUMBER = "0.8.3";
+   public static final String VERSION_SUFFIX = "0-8-3";
    public static final String TAG = Monte_Carlo_Hysteresis_Application.class.getSimpleName();
    private static final long serialVersionUID = 5700991704955056064L;
    public static final String TITLE_BAR_TEXT = "Monte Carlo Hysteresis " + VERSION_NUMBER;

@@ -225,7 +225,7 @@ private void addDipolePoints(CurveFamily chartCurves, ITrace2D trace, Chart2D ch
     traceHue = (traceHue + 0.22f);
     String traceName = buildTraceName(DIPOLE_CHART_TITLE, mDipoleTraceCount, chartCurves) 
     		+ " - Average over [dipoles]: " 
-    		+ fastAveragePeriod;
+    		+ 2*fastAveragePeriod;
     
     trace = new Trace2DSimple(); 
     // Set trace properties (name, color, point shape to disc) 
@@ -237,9 +237,10 @@ private void addDipolePoints(CurveFamily chartCurves, ITrace2D trace, Chart2D ch
 
     for(int i=0; i<chartCurves.getMagneticCube().size(); i++)
   	{
+    	// Calculate central moving average for each dipole.
     	float intermediateNetM = 0;
     	int dipoleCount = 0;
-    	for (int j=Math.max(0, i-fastAveragePeriod); j<i+1; j++){
+    	for (int j=Math.max(0, i-fastAveragePeriod); j<Math.min(chartCurves.getMagneticCube().size(),i+fastAveragePeriod); j++){
     		intermediateNetM += chartCurves.getMagneticCube().get(j).getM();
     		dipoleCount++;
     	}
