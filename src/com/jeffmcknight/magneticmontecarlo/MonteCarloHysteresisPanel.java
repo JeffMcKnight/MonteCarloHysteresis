@@ -213,25 +213,25 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
 
 protected void showDipoleChart() {
 	mhChart.removeAllTraces();
-	addDipolePoints(mhCurves, mTrace, mhChart);
+    mhChart.getAxisX().getAxisTitle().setTitle("n [Dipole count]");
+	
+	addDipolePoints(mhCurves, mhChart, 0);
+	addDipolePoints(mhCurves, mhChart, 2);
+
+	int averagePeriod = (int) (0.1 * mhCurves.getMagneticCube().size());
+	addDipolePoints(mhCurves, mhChart, averagePeriod);
 }
 
-private void addDipolePoints(CurveFamily chartCurves, ITrace2D trace, Chart2D chart2d) {
-    // Increment the count and update the color 
-    // to display multiple traces on the same chart.
-	int fastAveragePeriod = (int) (0.05 * chartCurves.getMagneticCube().size());
-    mDipoleTraceCount = mDipoleTraceCount  + 1;
-    traceColor = Color.getHSBColor(traceHue, 1f, 0.85f);
-    traceHue = (traceHue + 0.22f);
-    String traceName = buildTraceName(DIPOLE_CHART_TITLE, mDipoleTraceCount, chartCurves) 
-    		+ " - Average over [dipoles]: " 
-    		+ 2*fastAveragePeriod;
-    
-    trace = new Trace2DSimple(); 
-    // Set trace properties (name, color, point shape to disc) 
-    trace.setName(traceName);
-    trace.setColor(traceColor);
-    trace.setTracePainter(new TracePainterDisc());
+/*
+ * @param chartCurves - the curve objects containing the point data.
+ * @param chart2d - the chart to draw traces on.
+ * @param movingAveragePeriod - number of dipoles to average over. Do a cumulative
+ * average if set to 0.
+ */
+private void addDipolePoints(CurveFamily chartCurves, Chart2D chart2d, int movingAveragePeriod) {
+	int lowOffset = (movingAveragePeriod+1)/2;
+	int highOffset = movingAveragePeriod/2;
+    ITrace2D trace = buildTrace(chartCurves, movingAveragePeriod);
     // Add the trace to the chart. This has to be done before adding points (deadlock prevention): 
     chart2d.addTrace(trace);    
 
@@ -240,14 +240,43 @@ private void addDipolePoints(CurveFamily chartCurves, ITrace2D trace, Chart2D ch
     	// Calculate central moving average for each dipole.
     	float intermediateNetM = 0;
     	int dipoleCount = 0;
-    	for (int j=Math.max(0, i-fastAveragePeriod); j<Math.min(chartCurves.getMagneticCube().size(),i+fastAveragePeriod); j++){
+    	// Set lower bound of iteration at 0 for cumulative average if . 
+    	int lowerBound = (movingAveragePeriod==0) ? 0 : Math.max(0, i-lowOffset);
+    	for (int j=lowerBound; j<Math.min(chartCurves.getMagneticCube().size(),i+highOffset); j++){
     		intermediateNetM += chartCurves.getMagneticCube().get(j).getM();
     		dipoleCount++;
     	}
-    	System.out.println("i: " + i + "\t -- intermediateNetM: " + intermediateNetM + "\t -- get(i).getM(): " + chartCurves.getMagneticCube().get(i).getM());
-//  		trace.addPoint(i, chartCurves.getMagneticCube().get(i).getM());
+    	System.out.println("i: " + i 
+    			+ "\t -- intermediateNetM: " + intermediateNetM 
+    			+ "\t -- get(i).getM(): " + chartCurves.getMagneticCube().get(i).getM()
+    			+ "\t -- dipoleCount: " + dipoleCount
+    			);
   		trace.addPoint(i, intermediateNetM/dipoleCount);
   	}
+}
+
+/**
+ * @param chartCurves
+ * @param fastAveragePeriod
+ * @return
+ */
+private ITrace2D buildTrace(CurveFamily chartCurves, int fastAveragePeriod) {
+	ITrace2D trace;
+    // Increment the count and update the color 
+    // to display multiple traces on the same chart.
+	mDipoleTraceCount = mDipoleTraceCount  + 1;
+    traceColor = Color.getHSBColor(traceHue, 1f, 0.85f);
+    traceHue = (traceHue + 0.22f);
+    String traceName = buildTraceName(DIPOLE_CHART_TITLE, mDipoleTraceCount, chartCurves) 
+    		+ " - Average over [dipoles]: " 
+    		+ ((fastAveragePeriod>0)?fastAveragePeriod:"Cumulative");
+    
+    trace = new Trace2DSimple(); 
+    // Set trace properties (name, color, point shape to disc) 
+    trace.setName(traceName);
+    trace.setColor(traceColor);
+    trace.setTracePainter(new TracePainterDisc());
+	return trace;
 }
 
 /**
@@ -289,6 +318,7 @@ private String buildTraceName(String title, int count, CurveFamily curveFamily) 
 }
 
 protected void showMhCurveChart() {
+    mhChart.getAxisX().getAxisTitle().setTitle("H [nWb]");
 	mhChart.removeAllTraces();
 	addMhPoints(mhCurves, mTrace);
 }
@@ -389,7 +419,7 @@ protected void showMhCurveChart() {
     public void showChart(JPanel panel)
     {
        // Set chart axis titles
-       mhChart.getAxisX().getAxisTitle().setTitle("H");
+       mhChart.getAxisX().getAxisTitle().setTitle("H [nWb]");
        mhChart.getAxisY().getAxisTitle().setTitle("M");
 
        // Show chart grids for both x and y axis 
