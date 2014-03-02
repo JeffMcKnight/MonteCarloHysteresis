@@ -14,13 +14,13 @@ import javax.vecmath.Point3f;
 public class MagneticMedia extends ArrayList<DipoleSphere3f> 		
 {
 	private static final long serialVersionUID = 1L; 
-	private float m;					// Magnetic Remnanace for SDP assembly
-	private float a;					// Lattice constant, i.e.: spacing between particles on lattice grid
-	private int xCellCount;				// cell count in x direction
-	private int yCellCount;				// cell count in y direction
-	private int zCelCount;				// cell count in z direction
-	private float dipoleRadius;
-	private float packingFraction;
+	private float mRemnanace;					// Magnetic Remnanace for SDP assembly
+	private float mLatticeIndex;					// Lattice constant, i.e.: spacing between particles on lattice grid
+	private int mXCount;				// cell count in x direction
+	private int mYCount;				// cell count in y direction
+	private int mZCount;				// cell count in z direction
+	private float mDipoleRadius;
+	private float mPackingFraction;
 //	private int particlesCount;			// Number of dipoles particles in lattice
 //	private Tuple3i gridDimensions;		// set lattice dimensions
 //	private float hDC;					// Applied DC magnetic field
@@ -33,11 +33,11 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	public MagneticMedia() 
 	{
 		super(0);			// create empty arraylist
-		this.a = MonteCarloHysteresisPanel.DEFAULT_INDEX_A;
-		this.m = 0.0f;
-		this.xCellCount = 1;
-		this.yCellCount = 1;
-		this.zCelCount = 1;
+		this.mLatticeIndex = MonteCarloHysteresisPanel.DEFAULT_INDEX_A;
+		this.mRemnanace = 0.0f;
+		this.mXCount = 1;
+		this.mYCount = 1;
+		this.mZCount = 1;
 		this.populateSequential();
 //		this.RandomizeLattice();
 	}
@@ -45,11 +45,11 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	public MagneticMedia(int intSize) 
 	{
 		super(intSize);			// create with "intSize" elements; assumes cube with 1 unit per side
-		this.a = MonteCarloHysteresisPanel.DEFAULT_INDEX_A;
-		this.m = 0.0f;
-		this.xCellCount = 1;
-		this.yCellCount = 1;
-		this.zCelCount = 1;
+		this.mLatticeIndex = MonteCarloHysteresisPanel.DEFAULT_INDEX_A;
+		this.mRemnanace = 0.0f;
+		this.mXCount = 1;
+		this.mYCount = 1;
+		this.mZCount = 1;
 		this.populateSequential();
 //		this.RandomizeLattice();
 	}
@@ -57,11 +57,11 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	public MagneticMedia(int x, int y, int z) 
 	{
 		super(0);
-		this.a = MonteCarloHysteresisPanel.DEFAULT_INDEX_A;
-		this.m = 0.0f;
-		this.xCellCount = x;
-		this.yCellCount = y;
-		this.zCelCount = z;
+		this.mLatticeIndex = MonteCarloHysteresisPanel.DEFAULT_INDEX_A;
+		this.mRemnanace = 0.0f;
+		this.mXCount = x;
+		this.mYCount = y;
+		this.mZCount = z;
 		this.populateSequential();
 //		this.RandomizeLattice();
 	}
@@ -69,13 +69,13 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	public MagneticMedia(int x, int y, int z, float packingFraction, float dipoleRadius) 
 	{
 		super(0);
-		this.a = 2f * dipoleRadius / packingFraction ;
-		this.m = 0.0f;
-		this.xCellCount = x;
-		this.yCellCount = y;
-		this.zCelCount = z;
-		this.dipoleRadius = dipoleRadius;
-		this.packingFraction = packingFraction;
+		this.mLatticeIndex = 2f * dipoleRadius / packingFraction ;
+		this.mRemnanace = 0.0f;
+		this.mXCount = x;
+		this.mYCount = y;
+		this.mZCount = z;
+		this.mDipoleRadius = dipoleRadius;
+		this.mPackingFraction = packingFraction;
 		this.populateSequential();
 //		this.RandomizeLattice();
 	}
@@ -83,11 +83,11 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	public MagneticMedia(float spacing) 
 	{
 		super(0);
-		this.a = spacing;
-		this.m = 0.0f;
-		this.xCellCount = 1;
-		this.yCellCount = 1;
-		this.zCelCount = 1;
+		this.mLatticeIndex = spacing;
+		this.mRemnanace = 0.0f;
+		this.mXCount = 1;
+		this.mYCount = 1;
+		this.mZCount = 1;
 		this.populateSequential();
 //		this.RandomizeLattice();
 	}
@@ -96,14 +96,14 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	public void populateSequential() 
 	{
 		int gridIndex = 0;						// gridIndex is the initial index number of the dipole being added to the ArrayList
-		for (int k = 0; k < this.zCelCount; k++) 
-		{	for (int j = 0; j < this.yCellCount; j++) 
-			{	for (int i = 0; i < this.xCellCount; i++) 
+		for (int k = 0; k < this.mZCount; k++) 
+		{	for (int j = 0; j < this.mYCount; j++) 
+			{	for (int i = 0; i < this.mXCount; i++) 
 				{
 					DipoleSphere3f newDipole = new DipoleSphere3f();	// newDipole is a temp Dipole object to be added to ArrayList
 //					gridIndex = i + (j * (this.xCellCount)) + (k * (this.xCellCount) * (this.yCellCount));
-					newDipole.set(i*this.a, j*this.a, k*this.a);
-					newDipole.setRadius(this.dipoleRadius);
+					newDipole.set(i*this.mLatticeIndex, j*this.mLatticeIndex, k*this.mLatticeIndex);
+					newDipole.setRadius(this.mDipoleRadius);
 					this.add(gridIndex, newDipole);
 					gridIndex = gridIndex + 1;
 				}
@@ -115,7 +115,7 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	// Add dipole at the specified coords to the end of the current particle assembly
 	public void addDipoleAt(int x, int y, int z) 
 	{
-		DipoleSphere3f dipolefTemp = new DipoleSphere3f(x*this.a, y*this.a, z*this.a);	// newDipole is a temp Dipole object to be added to ArrayList
+		DipoleSphere3f dipolefTemp = new DipoleSphere3f(x*this.mLatticeIndex, y*this.mLatticeIndex, z*this.mLatticeIndex);	// newDipole is a temp Dipole object to be added to ArrayList
 		this.add(dipolefTemp);
 	}
 
@@ -179,41 +179,41 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	//** Calculate the net magnetism, M, for the entire particle assembly **
 	public float calculateNetM() 
 	{
-		this.m = 0.0f;
+		this.mRemnanace = 0.0f;
 		for (int i = 0; i < this.size(); i++) 
 		{
-			m += this.get(i).getM();
+			mRemnanace += this.get(i).getM();
 		}
-		return (m/(float)this.size());
+		return (mRemnanace/(float)this.size());
 	}
 
 	public float getDipoleRadius() 
 	{
-		return dipoleRadius;
+		return mDipoleRadius;
 	}
 
 	public void setDipoleRadius(float dipoleRadius) 
 	{
-		this.dipoleRadius = dipoleRadius;
+		this.mDipoleRadius = dipoleRadius;
 	}
 
 	//	Setters and Getters
 	public float getM() 
 	{
-		return this.m;
+		return this.mRemnanace;
 	}
 	public void setM(float mNet) 
 	{
-		this.m = mNet;
+		this.mRemnanace = mNet;
 	}
 
 	public float getA() 
 	{
-		return a;
+		return mLatticeIndex;
 	}
 	public void setA(float latticeConstant) 
 	{
-		this.a = latticeConstant;
+		this.mLatticeIndex = latticeConstant;
 	}
 
 	public int getCellCount() 
@@ -229,13 +229,25 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	//******************** getPackingFraction() ********************
 	public float getPackingFraction() 
 	{
-		return packingFraction;
+		return mPackingFraction;
 	}
 
 	//******************** setPackingFraction() ********************
 	public void setPackingFraction(float packingFraction) 
 	{
-		this.packingFraction = packingFraction;
+		this.mPackingFraction = packingFraction;
+	}
+
+	public int getXCount() {
+		return mXCount;
+	}
+
+	public int getYCount() {
+		return mYCount;
+	}
+
+	public int getZCount() {
+		return mZCount;
 	}
 
 /*

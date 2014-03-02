@@ -10,7 +10,7 @@ package com.jeffmcknight.magneticmontecarlo;
  */
 public class HysteresisCurve 
 {
-	RecordPoint[] dipoleSet;
+	RecordPoint[] mRecordPoint;
 
 	//******************** HysteresisCurve() -- Constructor ********************
 	/**
@@ -21,36 +21,36 @@ public class HysteresisCurve
 	 */
 	public HysteresisCurve(float hMin, float hMax, float stepSize) {
 		int pointCount = (int)((hMax-hMin)/stepSize);
-		dipoleSet = new RecordPoint[pointCount + 1] ;
-		for (int i = 0; i < dipoleSet.length; i++) 
+		mRecordPoint = new RecordPoint[pointCount + 1] ;
+		for (int i = 0; i < mRecordPoint.length; i++) 
 		{
 			float appliedH = (stepSize*i)  + hMin;
-			dipoleSet[i] = new RecordPoint(appliedH);
+			mRecordPoint[i] = new RecordPoint(appliedH);
 		}
 	}
 	
 	//******************** getDipoleSet() ********************
 	public RecordPoint[] getDipoleSet() 
 	{
-		return dipoleSet;
+		return mRecordPoint;
 	}
 
 	//******************** getDipole() ********************
 	public RecordPoint getDipole(int i) 
 	{
-		return dipoleSet[i];
+		return mRecordPoint[i];
 	}
 
 	//******************** getH() ********************
 	public float getH(int i) 
 	{
-		return dipoleSet[i].getH();
+		return mRecordPoint[i].getH();
 	}	
 
 	//******************** getLength() ********************
 	public int getLength() 
 	{
-		return dipoleSet.length;
+		return mRecordPoint.length;
 	}
 
 //	//******************** getM() ********************
@@ -62,9 +62,9 @@ public class HysteresisCurve
 	//******************** HysteresisCurve() ********************
 	public void generateCurve(MagneticMedia magneticMedia) 
 	{
-		for (int i = 0; i < dipoleSet.length; i++) 
+		for (int i = 0; i < mRecordPoint.length; i++) 
 		{
-			dipoleSet[i].setM( magneticMedia.recordToM(dipoleSet[i].getH()) );	
+			mRecordPoint[i].setM( magneticMedia.recordToM(mRecordPoint[i].getH()) );	
 			System.out.print("."); // show progress
 		}
 	} 	// END ******************** HysteresisCurve() ********************

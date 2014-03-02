@@ -33,14 +33,15 @@ import javax.swing.SwingConstants;
 //******************** class - MonteCarloHysteresisPanel ********************
 public class MonteCarloHysteresisPanel extends JPanel implements ActionListener 
 {
-   /**
+/**
     * 
     */
    private static final long serialVersionUID = 5824180412325621552L;
    public static final int DEFAULT_BORDER_SPACE = 30;
-   public static final int DEFAULT_APPLIED_FIELD_ITEM = 4;
+   public static final int DEFAULT_APPLIED_FIELD_ITEM = 0;
    public static final float SATURATION_M    = 100.0f;
    public static final float DEFAULT_INDEX_A  = 1.0f;
+   public static final double MOVING_AVERAGE_WINDOW = 0.1;
    public static final String CURVE_CHART_TITLE = "Curve #";
    public static final String DIPOLE_CHART_TITLE = "Dipole Set #";
    public static final String DIMENSIONS_X_AXIS_LABEL = "Lattice dimensions (X-axis):  ";
@@ -50,6 +51,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
    public static final String PACKING_FRACTION_LABEL = "Packing Fraction:                  ";
    public static final String RECORDING_PASSES_LABEL = "Number of Recording Passes:  ";
    public static final String APPLIED_FIELD_RANGE_LABEL = "Maximum Applied Field (H)";
+   public static final String APPLIED_FIELD_LABEL = "Applied Field (H)";
    public static final String CURVE_BUTTON_TEXT = "Show M-H Curve";
    public static final String DIPOLE_BUTTON_TEXT = "Show Dipole";
    private static final String RUN_SIMULATION = "run_simulation";
@@ -59,6 +61,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
    final static String[] H_FIELD_RANGE_ITEMS = {"10","20","30","40","50","60","70","80","90","100"};
    static int   intNumberCurves   = 1;
    public int   numberRecordPoints;
+   private MagneticMedia mMagneticMedia;
    private CurveFamily mhCurves;
 
    static JFrame frame;
@@ -69,8 +72,8 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
    private JComboBox mPackingFractionBox;
    private JComboBox mRecordCountBox;
    private JComboBox mAppliedFieldRangeBox;
-   private JRadioButton mCurveRadioButton;
    private ButtonGroup mRadioButtonGroup;
+   private JRadioButton mCurveRadioButton;
    private JRadioButton mDipoleRadioButton;
 
    private Chart2D mhChart;
@@ -83,6 +86,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
    private Color traceColor = new Color(255,0,0);
    private float traceHue = 0f;
    private ITrace2D mTrace;
+private ChartType mActiveChart;
    
    public interface CurveUpdateListener{
       
@@ -93,6 +97,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
     	mCurveTraceCount = 0;
     	mDipoleTraceCount = 0;
     	numberRecordPoints = CurveFamily.getDefaultRecordPoints();
+    	mActiveChart = ChartType.MH_CURVE;
         // Create a chart:  
         mhChart = new Chart2D();
         // Create a frame.
@@ -118,7 +123,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
     */
    public void buildRunConfigPanel()
    {
-        int initialComboIndex = 6;
+        int initialComboIndex = 7;
 
         // Create combo boxes for lattice parameters
         mXComboBox = new JComboBox(LATTICE_ITEMS);
@@ -156,7 +161,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         mControlsPanel.add(zComboBoxPanel);
         // Add separator line 
         mControlsPanel.add(new JSeparator(SwingConstants.HORIZONTAL));
-        // Add combo box panels for dipole radius, packing fraction, et
+        // Add combo box panels for dipole radius, packing fraction, etc
         mControlsPanel.add(dipoleRadiusPanel);
         mControlsPanel.add(packingFractionPanel);
         mControlsPanel.add(recordCountPanel);
@@ -176,7 +181,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         mDipoleRadioButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				showDipoleChart();
+				showDipoleChart(mMagneticMedia);
 			}
 		});
 
@@ -211,15 +216,40 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         mControlsPanel.setMaximumSize(new Dimension(200,600));
    }
 
-protected void showDipoleChart() {
+protected void showDipoleChart(MagneticMedia magneticMedia) {
+	mActiveChart = ChartType.MH_CURVE_POINT;
+	mAppliedFieldRangeBox.setName(APPLIED_FIELD_LABEL);
 	mhChart.removeAllTraces();
     mhChart.getAxisX().getAxisTitle().setTitle("n [Dipole count]");
-	
-	addDipolePoints(mhCurves, mhChart, 0);
-	addDipolePoints(mhCurves, mhChart, 2);
 
-	int averagePeriod = (int) (0.1 * mhCurves.getMagneticCube().size());
-	addDipolePoints(mhCurves, mhChart, averagePeriod);
+	if (null!=mMagneticMedia){
+		addDipolePoints(mhChart, 0, magneticMedia);
+		addDipolePoints(mhChart, 2, magneticMedia);
+		int averagePeriod = (int) (MOVING_AVERAGE_WINDOW * magneticMedia.size());
+		addDipolePoints(mhChart, averagePeriod, magneticMedia);
+		addDipolePoints(mhCurves, mhChart, magneticMedia);
+	}
+}
+
+private void addDipolePoints(CurveFamily chartCurves, Chart2D chart2d, MagneticMedia magneticMedia) {
+    ITrace2D trace = buildTrace(-1, magneticMedia);
+    // Add the trace to the chart. This has to be done before adding points (deadlock prevention): 
+    chart2d.addTrace(trace);    
+	generateScaledTotal(trace, magneticMedia);
+}
+
+private void generateScaledTotal(ITrace2D trace, MagneticMedia magneticCube) {
+	// Calculate central moving average for each dipole.
+	double runningTotal = 0.0;
+    for(int i=0; i<magneticCube.size(); i++)
+  	{
+    	runningTotal += magneticCube.get(i).getM();
+    	System.out.println("i: " + i 
+    			+ "\t -- get(i).getM(): " + magneticCube.get(i).getM()
+    			+ "\t -- runningTotal: " + runningTotal
+    			);
+  		trace.addPoint(i, runningTotal/magneticCube.size());
+  	}
 }
 
 /*
@@ -228,27 +258,36 @@ protected void showDipoleChart() {
  * @param movingAveragePeriod - number of dipoles to average over. Do a cumulative
  * average if set to 0.
  */
-private void addDipolePoints(CurveFamily chartCurves, Chart2D chart2d, int movingAveragePeriod) {
-	int lowOffset = (movingAveragePeriod+1)/2;
-	int highOffset = movingAveragePeriod/2;
-    ITrace2D trace = buildTrace(chartCurves, movingAveragePeriod);
+private void addDipolePoints(Chart2D chart2d, int movingAveragePeriod, MagneticMedia magneticMedia) {
+    ITrace2D trace = buildTrace(movingAveragePeriod, magneticMedia);
     // Add the trace to the chart. This has to be done before adding points (deadlock prevention): 
     chart2d.addTrace(trace);    
+    generateMovingAverage(movingAveragePeriod, trace, magneticMedia);
+}
 
-    for(int i=0; i<chartCurves.getMagneticCube().size(); i++)
+/**
+ * @param movingAveragePeriod
+ * @param trace
+ * @param magneticMedia TODO
+ */
+private void generateMovingAverage(int movingAveragePeriod, ITrace2D trace,
+		MagneticMedia magneticMedia) {
+	// Calculate central moving average for each dipole.
+    for(int i=0; i<magneticMedia.size(); i++)
   	{
-    	// Calculate central moving average for each dipole.
     	float intermediateNetM = 0;
     	int dipoleCount = 0;
+    	int lowOffset = (movingAveragePeriod+1)/2;
+    	int highOffset = movingAveragePeriod/2;
     	// Set lower bound of iteration at 0 for cumulative average if . 
     	int lowerBound = (movingAveragePeriod==0) ? 0 : Math.max(0, i-lowOffset);
-    	for (int j=lowerBound; j<Math.min(chartCurves.getMagneticCube().size(),i+highOffset); j++){
-    		intermediateNetM += chartCurves.getMagneticCube().get(j).getM();
+    	for (int j=lowerBound; j<Math.min(magneticMedia.size(),i+highOffset); j++){
+    		intermediateNetM += magneticMedia.get(j).getM();
     		dipoleCount++;
     	}
     	System.out.println("i: " + i 
     			+ "\t -- intermediateNetM: " + intermediateNetM 
-    			+ "\t -- get(i).getM(): " + chartCurves.getMagneticCube().get(i).getM()
+    			+ "\t -- get(i).getM(): " + magneticMedia.get(i).getM()
     			+ "\t -- dipoleCount: " + dipoleCount
     			);
   		trace.addPoint(i, intermediateNetM/dipoleCount);
@@ -256,20 +295,18 @@ private void addDipolePoints(CurveFamily chartCurves, Chart2D chart2d, int movin
 }
 
 /**
- * @param chartCurves
  * @param fastAveragePeriod
+ * @param magneticCube TODO
  * @return
  */
-private ITrace2D buildTrace(CurveFamily chartCurves, int fastAveragePeriod) {
+private ITrace2D buildTrace(int fastAveragePeriod, MagneticMedia magneticCube) {
 	ITrace2D trace;
     // Increment the count and update the color 
     // to display multiple traces on the same chart.
 	mDipoleTraceCount = mDipoleTraceCount  + 1;
     traceColor = Color.getHSBColor(traceHue, 1f, 0.85f);
     traceHue = (traceHue + 0.22f);
-    String traceName = buildTraceName(DIPOLE_CHART_TITLE, mDipoleTraceCount, chartCurves) 
-    		+ " - Average over [dipoles]: " 
-    		+ ((fastAveragePeriod>0)?fastAveragePeriod:"Cumulative");
+    String traceName = buildTraceName(DIPOLE_CHART_TITLE, mDipoleTraceCount, fastAveragePeriod, magneticCube);
     
     trace = new Trace2DSimple(); 
     // Set trace properties (name, color, point shape to disc) 
@@ -279,28 +316,47 @@ private ITrace2D buildTrace(CurveFamily chartCurves, int fastAveragePeriod) {
 	return trace;
 }
 
+private String chartDescription(int fastAveragePeriod) {
+	String string;
+	switch (fastAveragePeriod) {
+	case 0:
+		string = "Cumulative Average";
+		break;
+	case -1:
+		string = "Total (Normalized to " + SATURATION_M + ")";
+		break;
+	default:
+		string = "Moving Average over " + fastAveragePeriod + " dipoles"; 
+		break;
+	}
+	return string;
+}
+
 /**
  * @param title 
- * @param fastAveragePeriod
  * @param count TODO
- * @param curveFamily TODO
+ * @param fastAveragePeriod
+ * @param magneticMedia TODO
  * @return
  */
-private String buildTraceName(String title, int count, CurveFamily curveFamily) {
+private String buildTraceName(String title, 
+		int count, 
+		int fastAveragePeriod, 
+		MagneticMedia magneticMedia) {
 	Calendar calendar = Calendar.getInstance();
     calendar.setTimeInMillis(System.currentTimeMillis());
     String traceName = new StringBuilder(title)
     .append(String.valueOf(count))
     .append(" : ")
-    .append(curveFamily.getCubeEdgeX())
+    .append(magneticMedia.getXCount())
     .append("x")
-    .append(curveFamily.getCubeEdgeY())
+    .append(magneticMedia.getYCount())
     .append("x")
-    .append(curveFamily.getCubeEdgeZ())
+    .append(magneticMedia.getZCount())
     .append(" - Packing Fraction: ")
-    .append(curveFamily.getPackingFraction())
+    .append(magneticMedia.getPackingFraction())
     .append(" - Radius [um]: ")
-    .append(curveFamily.getDipoleRadius())
+    .append(magneticMedia.getDipoleRadius())
     .append(" - Date: ")
     .append(calendar.get(Calendar.YEAR))
     .append("-")
@@ -313,14 +369,21 @@ private String buildTraceName(String title, int count, CurveFamily curveFamily) 
     .append(calendar.get(Calendar.MINUTE))
     .append(":")
     .append(calendar.get(Calendar.SECOND))
+    .append(" -- ")
+    .append(chartDescription(fastAveragePeriod))
     .toString();
 	return traceName;
 }
 
 protected void showMhCurveChart() {
+	mActiveChart = ChartType.MH_CURVE;
+	mAppliedFieldRangeBox.setName(APPLIED_FIELD_RANGE_LABEL);
     mhChart.getAxisX().getAxisTitle().setTitle("H [nWb]");
 	mhChart.removeAllTraces();
-	addMhPoints(mhCurves, mTrace);
+	// Show data points only if we have already run a simulation.
+	if (null!=mhCurves){
+		addMhPoints(mhCurves, mTrace);
+	}
 }
 
 // *************** buildButtonPanel() ***************
@@ -378,15 +441,21 @@ protected void showMhCurveChart() {
         // Run simulation if run button is clicked
 		if ( e.getActionCommand().equals(RUN_SIMULATION) ) 
 		{
-			mhCurves = new CurveFamily(recordCount, xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius, maxAppliedField);
-			
-			float recordedNetMNegative[][] = new float[numberRecordPoints][recordCount];
-			float recordedNetMPositive[][] = new float[numberRecordPoints][recordCount];
-
-			mhCurves.recordMHCurves(recordedNetMNegative, recordedNetMPositive);
-//			mhCurves.writeCurvesToFile();
-			
-	      addMhPoints(mhCurves, mTrace);
+			switch (mActiveChart) {
+			case MH_CURVE:
+				mhCurves = new CurveFamily(recordCount, xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius, maxAppliedField);
+				mhCurves.recordMHCurves();
+				addMhPoints(mhCurves, mTrace);
+				break;
+			case MH_CURVE_POINT:
+				mMagneticMedia = new MagneticMedia(xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius);
+				mMagneticMedia.randomizeLattice();
+				mMagneticMedia.recordToM(maxAppliedField);
+				showDipoleChart(mMagneticMedia);
+				break;
+			default:
+				break;
+			}
 		}
         
     } // END ******************** actionPerformed() ********************
@@ -446,7 +515,7 @@ protected void showMhCurveChart() {
       mCurveTraceCount = mCurveTraceCount  + 1;
       traceColor = Color.getHSBColor(traceHue, 1f, 0.85f);
       traceHue = (traceHue + 0.22f);
-      String traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, mhCurves);
+      String traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, mhCurves.getMagneticCube());
       
       trace = new Trace2DSimple(); 
       // Set trace properties (name, color, point shape to disc) 
