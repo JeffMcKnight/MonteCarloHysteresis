@@ -217,38 +217,17 @@ public void setMagneticCube(MagneticMedia magneticCube) {
 	}
 
 		//******************** recordMHCurves ********************
-		public void recordMHCurves(float[][] recordedNetMNegative, float[][] recordedNetMPositive) 
+		public void recordMHCurves() 
 		{
-			float appliedH;
-	//		magneticCube.randomizeLattice();
-	
-	//		PointCharts  mhChart = new PointCharts ();
-	//		System.out.println("  H,    M,    M/H");
-	
 	//		run recording passes for "recordPasses" times
-			for (int j = 0; j < curveCount; j++) 
-			{
-				System.out.println();
-				System.out.print("Pass " + j + " ");
+			for (int j = 0; j < curveCount; j++) {
+				System.out.print("\nPass " + j + " ");
 				magneticCube.randomizeLattice();
 				mhCurveSet[j].generateCurve(magneticCube);
-/*				
-				int i = 0;
-				while (i < numberRecordPoints)
-	//			while (recordedNetMPositive[i][j] < MonteCarloHysteresisPanel.saturationM)
-				{
-					appliedH     = i * DEFAULT_RECORD_STEP_SIZE;
-					recordedNetMNegative[i][j] = magneticCube.recordToM(-appliedH);
-					recordedNetMPositive[i][j] = magneticCube.recordToM(appliedH);
-					System.out.print(".");
-					i = i + 1;
-				} // while recordedNetM - END
-			*/
-			} // for (j < recordedNetM.length - END
+			} 
 			generateAverageMCurve();
 			generateMinMCurve();
 			generateMaxMCurve();
-			
 		}
 
 		//******************** generateMaxMCurve() ********************
