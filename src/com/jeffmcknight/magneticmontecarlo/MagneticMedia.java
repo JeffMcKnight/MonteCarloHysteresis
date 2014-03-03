@@ -13,7 +13,8 @@ import javax.vecmath.Point3f;
 //**********xDim,yDim,zDim indicate dipole count in each direction
 public class MagneticMedia extends ArrayList<DipoleSphere3f> 		
 {
-	private static final long serialVersionUID = 1L; 
+	private static final long serialVersionUID = 1L;
+	private static final String TAG = MagneticMedia.class.getSimpleName(); 
 	private float mRemnanace;					// Magnetic Remnanace for SDP assembly
 	private float mLatticeIndex;					// Lattice constant, i.e.: spacing between particles on lattice grid
 	private int mXCount;				// cell count in x direction
@@ -26,8 +27,11 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 //	private float hDC;					// Applied DC magnetic field
 //	@SuppressWarnings("rawtypes")
 //	private ArrayList arrayList;			// Set of dipole particles in SDP assembly
+	private MagneticMediaListener mUpdateListener;
 	
-	
+	public interface MagneticMediaListener{
+		void notifyRecordingDone(MagneticMedia magneticMedia);
+	}
 	
 //**********Constructors**********
 	public MagneticMedia() 
@@ -66,29 +70,21 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 //		this.RandomizeLattice();
 	}
 	
-	public MagneticMedia(int x, int y, int z, float packingFraction, float dipoleRadius) 
+	public MagneticMedia(int x, int y, int z, float packingFraction, float dipoleRadius, MagneticMediaListener updateListener) 
 	{
 		super(0);
-		this.mLatticeIndex = 2f * dipoleRadius / packingFraction ;
-		this.mRemnanace = 0.0f;
-		this.mXCount = x;
-		this.mYCount = y;
-		this.mZCount = z;
-		this.mDipoleRadius = dipoleRadius;
-		this.mPackingFraction = packingFraction;
-		this.populateSequential();
-//		this.RandomizeLattice();
-	}
-	
-	public MagneticMedia(float spacing) 
-	{
-		super(0);
-		this.mLatticeIndex = spacing;
-		this.mRemnanace = 0.0f;
-		this.mXCount = 1;
-		this.mYCount = 1;
-		this.mZCount = 1;
-		this.populateSequential();
+		mLatticeIndex = 2f * dipoleRadius / packingFraction ;
+		mRemnanace = 0.0f;
+		mXCount = x;
+		mYCount = y;
+		mZCount = z;
+		mDipoleRadius = dipoleRadius;
+		mPackingFraction = packingFraction;
+		populateSequential();
+		mUpdateListener = updateListener;
+		System.out.println(TAG + "recordToM()" 
+				+"\t -- mUpdateListener: "+ ((null==mUpdateListener)?"null":mUpdateListener.getClass().getSimpleName())
+				);
 //		this.RandomizeLattice();
 	}
 	
@@ -149,29 +145,52 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	public float recordToM (float hApplied) 
 	{
 		float m = 0.0f;
-//		System.out.println("n,    m");
-		for (int i = 0; i < this.getCellCount(); i++) 
-			{ 
+		for (int i = 0; i < this.getCellCount(); i++) { 
 			this.get(i).setM(this.fixateDipole(i, hApplied)); 
 			m = m + this.get(i).getM(); 
-//			System.out.println(i + " , " + m/(i+1));
-			}
-//		for (int i = 0; i < this.getCellCount(); i++) 
-//			{ m = m + this.get(i).getM(); }
+		}
+		System.out.println(TAG + "recordToM()" 
+				+"\t -- mUpdateListener: "+ ((null==mUpdateListener)?"null":mUpdateListener.getClass().getSimpleName())
+				);
+		mUpdateListener.notifyRecordingDone(this);
 		return m/this.getCellCount();
 	}
 
 	//**********fixateM()**********
 	//** Fix the dipole orientation for a single particle **
-	public float fixateDipole(int i, float floatHApplied) 
+	public float fixateDipole(int i, float appliedHField) 
 	{
-		float floatB = floatHApplied;
+		float netBField = 0f;
+		float netMField = calculateNetMField(i);
+		netBField = netMField + appliedHField;
+		if (netBField > 0.0f)	{return( MonteCarloHysteresisPanel.SATURATION_M);}
+		else				{return(-MonteCarloHysteresisPanel.SATURATION_M);}
+	}
+
+	/**
+	 * @param i - the index of the dipole where we calculate M, the net magnetic remanence field 
+	 * @return - the net magnetic remanence field, M, at dipole with index "i"
+	 */
+	private float calculateNetMField(int i) {
+		float netMField = 0;
 		for (int j = 0; j < i; j++) 
 		{
-			floatB = floatB + this.get(i).getHInteraction(this.get(j));
+			netMField += this.get(i).getHInteraction(this.get(j));
 		}
-		if (floatB > 0.0f)	{return( MonteCarloHysteresisPanel.SATURATION_M);}
-		else				{return(-MonteCarloHysteresisPanel.SATURATION_M);}
+		return netMField;
+	}
+	
+	/**
+	 * @param i - the index of the dipole where we calculate M, the net magnetic remanence field 
+	 * @return - the net magnetic remanence field, M, at dipole with index "i"
+	 */
+	private float calculateNetMFieldMultiThreaded(int i) {
+		float netMField = 0;
+		for (int j = 0; j < i; j++) 
+		{
+			netMField += this.get(i).getHInteraction(this.get(j));
+		}
+		return netMField;
 	}
 	
 	
@@ -220,11 +239,6 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	{
 		return(this.size());
 	}
-/*
-	public float gethDC() {
-		return hDC;
-	}
-*/
 
 	//******************** getPackingFraction() ********************
 	public float getPackingFraction() 
@@ -249,28 +263,5 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	public int getZCount() {
 		return mZCount;
 	}
-
-/*
-	public void sethDC(float hDC) {
-		this.hDC = hDC;
-	}
-*/
-
-/*	public ArrayList<Dipole> getDipoleArray() {
-		return dipole;
-	}
-
-	public void setDipoleArray(ArrayList<Dipole> dipole) {
-		this.dipole = dipole;
-	}
-
-	public Dipole getDipole(int listIndex) {
-		return dipole.get(listIndex);
-	}
-
-	public void setDipole(int listIndex, Dipole d0) {
-		dipole.set(listIndex, d0);
-	}
-*/
 
 }

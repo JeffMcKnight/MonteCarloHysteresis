@@ -30,12 +30,15 @@ import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
 import javax.swing.SwingConstants;
 
+import com.jeffmcknight.magneticmontecarlo.MagneticMedia.MagneticMediaListener;
+
 //******************** class - MonteCarloHysteresisPanel ********************
 public class MonteCarloHysteresisPanel extends JPanel implements ActionListener 
 {
 /**
     * 
     */
+	private static final String TAG = MonteCarloHysteresisPanel.class.getSimpleName();
    private static final long serialVersionUID = 5824180412325621552L;
    public static final int DEFAULT_BORDER_SPACE = 30;
    public static final int DEFAULT_APPLIED_FIELD_ITEM = 0;
@@ -60,7 +63,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
    final static String[] DIPOLE_RADIUS_OPTIONS = {"0.1","0.2","0.3","0.4","0.5","0.6","0.7","0.8","0.9","1.0","1.1","1.2","1.3","1.4","1.5","1.6","1.7","1.8","1.9","2.0"};
    final static String[] H_FIELD_RANGE_ITEMS = {"10","20","30","40","50","60","70","80","90","100"};
    static int   intNumberCurves   = 1;
-   public int   numberRecordPoints;
+   private int   numberRecordPoints;
    private MagneticMedia mMagneticMedia;
    private CurveFamily mhCurves;
 
@@ -80,17 +83,16 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
     // Create a frame.
    private int mCurveTraceCount;
    private int mDipoleTraceCount;
-   JFrame chartFrame;
+   private JFrame chartFrame;
    private JPanel mChartPanel;
    private JPanel mControlsPanel;
    private Color traceColor = new Color(255,0,0);
    private float traceHue = 0f;
    private ITrace2D mTrace;
-private ChartType mActiveChart;
+   private ChartType mActiveChart;
+   private MagneticMediaListener mDipoleUpdateListener;
+   private MagneticMediaListener mChartUpdateListener;
    
-   public interface CurveUpdateListener{
-      
-   }
 
     public MonteCarloHysteresisPanel() 
     {
@@ -112,11 +114,37 @@ private ChartType mActiveChart;
         this.add(mChartPanel);
         
         buildRunConfigPanel();
-
         showChart(mChartPanel);
+        implementDipoleChartListener();
+        implementCurveChartListener();
     } // END constructor
 
-   // *************** buildRunConfigPanel() ***************
+    /*
+     * Redraws dipole chart when the MagneticMedia notifies that it has updated itself
+     */
+	private void implementDipoleChartListener() {
+		mDipoleUpdateListener = new MagneticMediaListener() {
+    		@Override
+    		public void notifyRecordingDone(MagneticMedia magneticMedia) {
+    			showDipoleChart(magneticMedia);
+    		}
+    	};
+	}
+
+
+    /*
+     * 
+     */
+    private void implementCurveChartListener() {
+    	mChartUpdateListener = new MagneticMediaListener() {
+    		@Override
+    		public void notifyRecordingDone(MagneticMedia magneticMedia) {
+    			// TODO - stub
+    		}
+    	};
+    }
+
+// *************** buildRunConfigPanel() ***************
    /**
     * Build JPanel on left side of JFrame that contains 
     * labeled JComboBoxes to set simulation parameters 
@@ -448,10 +476,9 @@ protected void showMhCurveChart() {
 				addMhPoints(mhCurves, mTrace);
 				break;
 			case MH_CURVE_POINT:
-				mMagneticMedia = new MagneticMedia(xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius);
+				mMagneticMedia = new MagneticMedia(xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius, mDipoleUpdateListener);
 				mMagneticMedia.randomizeLattice();
 				mMagneticMedia.recordToM(maxAppliedField);
-				showDipoleChart(mMagneticMedia);
 				break;
 			default:
 				break;

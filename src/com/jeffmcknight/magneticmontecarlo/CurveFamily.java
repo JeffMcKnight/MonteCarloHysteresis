@@ -48,22 +48,6 @@ public class CurveFamily
 //	float recordedNetMPositive[][] = new float[numberRecordPoints][recordPasses];
 
 	//********** constructor - CurveFamily **********
-	/**
-	 * @param count TODO
-	 * 
-	 */
-	public CurveFamily(int count) 
-	{
-		numberRecordPoints   = DEFAULT_RECORD_POINTS;
-		curveCount = count;
-		mCubeEdgeX       = 10;
-		mCubeEdgeY       = 10;
-		mCubeEdgeZ       = 10;
-		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, DEFAULT_PACKING_FRACTION, DEFAULT_DIPOLE_RADIUS);
-		mhCurveSet = new  HysteresisCurve[count];
-		averageMCurve = new HysteresisCurve(DEFAULT_MINIMUM_H, DEFAULT_MAXIMUM_H, DEFAULT_RECORD_STEP_SIZE);
-	}
-
 	public CurveFamily(int count, int xDim, int yDim, int zDim, float packingFraction, float dipoleRadius, float maximumH) 
 	{
 		numberRecordPoints   = (int) (2*(DEFAULT_MAXIMUM_H/DEFAULT_RECORD_STEP_SIZE) + 1);
@@ -75,7 +59,7 @@ public class CurveFamily
 		mDipoleRadius = dipoleRadius;
 		latticeConst = 2f * dipoleRadius / packingFraction ; 
 		mMaxH = maximumH;  
-		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, packingFraction, dipoleRadius);
+		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, packingFraction, dipoleRadius, null);
 		averageMCurve = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		minMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		maxMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
