@@ -517,13 +517,21 @@ protected void showMhCurveChart() {
 		{
 			switch (mActiveChart) {
 			case MH_CURVE:
-				mhCurves = new CurveFamily(recordCount, xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius, maxAppliedField, mCurveFamilyListener);
+				mhCurves = new CurveFamily(
+						recordCount, 
+						xAxisCount, 
+						yAxisCount, 
+						zAxisCount, 
+						packingFraction, 
+						dipoleRadius, 
+						maxAppliedField, 
+						mCurveFamilyListener);
 				mhCurves.recordMHCurves();
 				break;
 			case MH_CURVE_POINT:
 				mMagneticMedia = new MagneticMedia(xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius, mDipoleUpdateListener);
 				mMagneticMedia.randomizeLattice();
-				mMagneticMedia.recordToM(maxAppliedField);
+				mMagneticMedia.recordWithAcBias(maxAppliedField);
 				break;
 			default:
 				break;
