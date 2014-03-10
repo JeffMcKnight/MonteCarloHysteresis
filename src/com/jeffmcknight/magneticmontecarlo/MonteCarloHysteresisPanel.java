@@ -30,6 +30,7 @@ import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
 import javax.swing.SwingConstants;
 
+import com.jeffmcknight.magneticmontecarlo.CurveFamily.CurveFamilyListener;
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.MagneticMediaListener;
 
 //******************** class - MonteCarloHysteresisPanel ********************
@@ -92,7 +93,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
    private ChartType mActiveChart;
    private MagneticMediaListener mDipoleUpdateListener;
    private MagneticMediaListener mChartUpdateListener;
-   
+   private CurveFamilyListener mCurveFamilyListener;
 
     public MonteCarloHysteresisPanel() 
     {
@@ -117,7 +118,8 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         showChart(mChartPanel);
         implementDipoleChartListener();
         implementCurveChartListener();
-    } // END constructor
+        implementCurveFamilyListener();
+        } // END constructor
 
     /*
      * Redraws dipole chart when the MagneticMedia notifies that it has updated itself
@@ -131,6 +133,17 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
     	};
 	}
 
+    /*
+     * Redraws MH CurveFamily chart when the CurveFamily object notifies that it has updated itself
+     */
+	private void implementCurveFamilyListener() {
+		mCurveFamilyListener = new CurveFamilyListener() {
+			@Override
+			public void notifyCurvesDone(CurveFamily curveFamily) {
+				addMhPoints(curveFamily, mTrace);
+			}
+		};
+	}
 
     /*
      * 
@@ -504,9 +517,8 @@ protected void showMhCurveChart() {
 		{
 			switch (mActiveChart) {
 			case MH_CURVE:
-				mhCurves = new CurveFamily(recordCount, xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius, maxAppliedField);
+				mhCurves = new CurveFamily(recordCount, xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius, maxAppliedField, mCurveFamilyListener);
 				mhCurves.recordMHCurves();
-				addMhPoints(mhCurves, mTrace);
 				break;
 			case MH_CURVE_POINT:
 				mMagneticMedia = new MagneticMedia(xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius, mDipoleUpdateListener);

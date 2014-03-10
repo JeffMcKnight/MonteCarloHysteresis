@@ -41,14 +41,21 @@ public class CurveFamily
 	HysteresisCurve maxMCurve;
    private float mPackingFraction;
    private float mDipoleRadius;
-	
+	private CurveFamilyListener mCurveFamilyListener;
 	
 //	public static final float defaultIndexA  = 1.0f;
 //	float recordedNetMNegative[][] = new float[numberRecordPoints][recordPasses];
 //	float recordedNetMPositive[][] = new float[numberRecordPoints][recordPasses];
 
 	//********** constructor - CurveFamily **********
-	public CurveFamily(int count, int xDim, int yDim, int zDim, float packingFraction, float dipoleRadius, float maximumH) 
+	public CurveFamily(int count, 
+			int xDim, 
+			int yDim, 
+			int zDim, 
+			float packingFraction, 
+			float dipoleRadius, 
+			float maximumH, 
+			CurveFamilyListener curveFamilyListener) 
 	{
 		numberRecordPoints   = (int) (2*(DEFAULT_MAXIMUM_H/DEFAULT_RECORD_STEP_SIZE) + 1);
 		curveCount = count;
@@ -59,6 +66,7 @@ public class CurveFamily
 		mDipoleRadius = dipoleRadius;
 		latticeConst = 2f * dipoleRadius / packingFraction ; 
 		mMaxH = maximumH;  
+		mCurveFamilyListener = curveFamilyListener; 
 		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, packingFraction, dipoleRadius, null);
 		averageMCurve = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		minMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
@@ -204,14 +212,15 @@ public void setMagneticCube(MagneticMedia magneticCube) {
 		public void recordMHCurves() 
 		{
 	//		run recording passes for "recordPasses" times
-			for (int j = 0; j < curveCount; j++) {
-				System.out.print("\nPass " + j + " ");
+			for (int i = 0; i < curveCount; i++) {
+				System.out.print("\nPass " + i + " ");
 				magneticCube.randomizeLattice();
-				mhCurveSet[j].generateCurve(magneticCube);
+				mhCurveSet[i].generateCurve(magneticCube);
 			} 
 			generateAverageMCurve();
 			generateMinMCurve();
 			generateMaxMCurve();
+			mCurveFamilyListener.notifyCurvesDone(this);
 		}
 
 		//******************** generateMaxMCurve() ********************
@@ -431,6 +440,9 @@ public void updatePackingFraction(float packingFraction)
 		magneticCube.setPackingFraction(packingFraction);
 }
 
+public interface CurveFamilyListener{
+	void notifyCurvesDone(CurveFamily curveFamily);
+}
 
 } //END ******************** class - CurveFamily ********************
 

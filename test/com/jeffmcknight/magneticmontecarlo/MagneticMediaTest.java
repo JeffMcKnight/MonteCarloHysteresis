@@ -91,7 +91,7 @@ public class MagneticMediaTest extends TestCase {
 		sdpCorner.addDipoleAt(point000);
 		sdpCorner.addDipoleAt(point110);
 		assertEquals(2, sdpCorner.size());
-		assertEquals(100.0f, sdpCorner.recordToM(floatHApplied), 0.001f);
+		assertEquals(100.0f, sdpCorner.recordWithAcBias(floatHApplied), 0.001f);
 
 		MagneticMedia sdpRoot2Minus = new MagneticMedia(0, 0, 1);
 		sdpRoot2Minus.clear();
@@ -99,7 +99,7 @@ public class MagneticMediaTest extends TestCase {
 		sdpRoot2Minus.addDipoleAt(point000);
 		sdpRoot2Minus.addDipoleAt(point10r2m);
 		assertEquals(2, sdpRoot2Minus.size());
-		assertEquals(100.0f, sdpRoot2Minus.recordToM(floatHApplied), 0.001f);
+		assertEquals(100.0f, sdpRoot2Minus.recordWithAcBias(floatHApplied), 0.001f);
 
 	
 		MagneticMedia sdpRoot2Plus = new MagneticMedia(0, 0, 1);
@@ -108,11 +108,11 @@ public class MagneticMediaTest extends TestCase {
 		sdpRoot2Plus.addDipoleAt(point000);
 		sdpRoot2Plus.addDipoleAt(point10r2p);
 		assertEquals(2, sdpRoot2Plus.size());
-		assertEquals(0.0f, sdpRoot2Plus.recordToM(floatHApplied), 0.001f);
+		assertEquals(0.0f, sdpRoot2Plus.recordWithAcBias(floatHApplied), 0.001f);
 	
 		floatHApplied = -0.001f;
-		assertEquals(-100.0f, sdpRoot2Minus.recordToM(floatHApplied), 0.001f);
-		assertEquals(   0.0f, sdpRoot2Plus.recordToM(floatHApplied), 0.001f);
+		assertEquals(-100.0f, sdpRoot2Minus.recordWithAcBias(floatHApplied), 0.001f);
+		assertEquals(   0.0f, sdpRoot2Plus.recordWithAcBias(floatHApplied), 0.001f);
 
 		
 //		***************Test netM for a collection of dipoles along a linear axis*************************
@@ -129,11 +129,11 @@ public class MagneticMediaTest extends TestCase {
 
 		
 //		Along X axis, net M should be zero for an even number of dipoles and M/intAxisLength for an odd number of dipoles
-		assertEquals((intAxisLength % 2)*MonteCarloHysteresisPanel.SATURATION_M/intAxisLength, sdpXaxis.recordToM(floatHApplied), 0.001f);
+		assertEquals((intAxisLength % 2)*MonteCarloHysteresisPanel.SATURATION_M/intAxisLength, sdpXaxis.recordWithAcBias(floatHApplied), 0.001f);
 //		Along Y axis, net M should be zero for an even number of dipoles and M/intAxisLength for an odd number of dipoles
-		assertEquals((intAxisLength % 2)*MonteCarloHysteresisPanel.SATURATION_M/intAxisLength, sdpYaxis.recordToM(floatHApplied), 0.001f);
+		assertEquals((intAxisLength % 2)*MonteCarloHysteresisPanel.SATURATION_M/intAxisLength, sdpYaxis.recordWithAcBias(floatHApplied), 0.001f);
 //		Along Z axis, net M should be MonteCarloHysteresisPanel.floatDipoleM
-		assertEquals(MonteCarloHysteresisPanel.SATURATION_M, sdpZaxis.recordToM(floatHApplied), 0.001f);
+		assertEquals(MonteCarloHysteresisPanel.SATURATION_M, sdpZaxis.recordWithAcBias(floatHApplied), 0.001f);
 
 	
 	}

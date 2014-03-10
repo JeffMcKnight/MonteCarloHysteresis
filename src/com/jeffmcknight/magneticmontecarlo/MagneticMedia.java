@@ -142,7 +142,7 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	}
 
 	//**********recordToM()**********
-	public float recordToM (float hApplied) 
+	public float recordWithAcBias (float hApplied) 
 	{
 		float m = 0.0f;
 		for (int i = 0; i < this.getCellCount(); i++) { 
@@ -152,12 +152,15 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 		System.out.println(TAG + "recordToM()" 
 				+"\t -- mUpdateListener: "+ ((null==mUpdateListener)?"null":mUpdateListener.getClass().getSimpleName())
 				);
-		mUpdateListener.notifyRecordingDone(this);
+		// TODO: Use this Listener for both MHCurve and individual dipole charts so it will never be null.
+		if (null != mUpdateListener){
+			mUpdateListener.notifyRecordingDone(this);
+		}
 		return m/this.getCellCount();
 	}
 
 	//**********fixateM()**********
-	//** Fix the dipole orientation for a single particle **
+	//** Fixate the magnetic orientation for a single particle **
 	public float fixateDipole(int i, float appliedHField) 
 	{
 		float netBField = 0f;
