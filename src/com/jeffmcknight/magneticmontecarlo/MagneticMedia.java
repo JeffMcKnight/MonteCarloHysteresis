@@ -36,14 +36,7 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 //**********Constructors**********
 	public MagneticMedia() 
 	{
-		super(0);			// create empty arraylist
-		this.mLatticeIndex = MonteCarloHysteresisPanel.DEFAULT_INDEX_A;
-		this.mRemnanace = 0.0f;
-		this.mXCount = 1;
-		this.mYCount = 1;
-		this.mZCount = 1;
-		this.populateSequential();
-//		this.RandomizeLattice();
+		this(1,1,1);
 	}
 		
 	public MagneticMedia(int intSize) 

@@ -264,16 +264,17 @@ protected void showDipoleChart(MagneticMedia magneticMedia) {
     mhChart.getAxisX().getAxisTitle().setTitle("n [Dipole count]");
 
 	if (null!=mMagneticMedia){
-		addDipolePoints(mhChart, 0, magneticMedia, Color.RED);
-		addDipolePoints(mhChart, 2, magneticMedia, Color.DARK_GRAY);
+		addDipolePoints(mhChart, 0, magneticMedia, Color.PINK);
+		addDipolePoints(mhChart, 2, magneticMedia, Color.BLUE.brighter());
+		// Set moving average to a fraction of the total number of dipoles.
 		int averagePeriod = (int) (MOVING_AVERAGE_WINDOW * magneticMedia.size());
-		addDipolePoints(mhChart, averagePeriod, magneticMedia, Color.BLUE);
-		addDipolePoints(mhCurves, mhChart, magneticMedia);
+		addDipolePoints(mhChart, averagePeriod, magneticMedia, Color.RED);
+		addDipolePoints(mhCurves, mhChart, magneticMedia, Color.GREEN.darker());
 	}
 }
 
-private void addDipolePoints(CurveFamily chartCurves, Chart2D chart2d, MagneticMedia magneticMedia) {
-    ITrace2D trace = buildTrace(-1, magneticMedia);
+private void addDipolePoints(CurveFamily chartCurves, Chart2D chart2d, MagneticMedia magneticMedia, Color color) {
+    ITrace2D trace = buildTrace(-1, magneticMedia, color);
     // Add the trace to the chart. This has to be done before adding points (deadlock prevention): 
     chart2d.addTrace(trace);    
 	generateScaledTotal(trace, magneticMedia);
@@ -291,19 +292,6 @@ private void generateScaledTotal(ITrace2D trace, MagneticMedia magneticCube) {
     			);
   		trace.addPoint(i, runningTotal/magneticCube.size());
   	}
-}
-
-/*
- * @param chartCurves - the curve objects containing the point data.
- * @param chart2d - the chart to draw traces on.
- * @param movingAveragePeriod - number of dipoles to average over. Do a cumulative
- * average if set to 0.
- */
-private void addDipolePoints(Chart2D chart2d, int movingAveragePeriod, MagneticMedia magneticMedia) {
-    ITrace2D trace = buildTrace(movingAveragePeriod, magneticMedia);
-    // Add the trace to the chart. This has to be done before adding points (deadlock prevention): 
-    chart2d.addTrace(trace);    
-    generateMovingAverage(movingAveragePeriod, trace, magneticMedia);
 }
 
 /*
@@ -346,28 +334,6 @@ private void generateMovingAverage(int movingAveragePeriod, ITrace2D trace,
     			);
   		trace.addPoint(i, intermediateNetM/dipoleCount);
   	}
-}
-
-/**
- * @param fastAveragePeriod
- * @param magneticCube TODO
- * @return
- */
-private ITrace2D buildTrace(int fastAveragePeriod, MagneticMedia magneticCube) {
-	ITrace2D trace;
-    // Increment the count and update the color 
-    // to display multiple traces on the same chart.
-	mDipoleTraceCount = mDipoleTraceCount  + 1;
-    traceColor = Color.getHSBColor(traceHue, 1f, 0.85f);
-    traceHue = (traceHue + 0.22f);
-    String traceName = buildTraceName(DIPOLE_CHART_TITLE, mDipoleTraceCount, fastAveragePeriod, magneticCube);
-    
-    trace = new Trace2DSimple(); 
-    // Set trace properties (name, color, point shape to disc) 
-    trace.setName(traceName);
-    trace.setColor(traceColor);
-    trace.setTracePainter(new TracePainterDisc());
-	return trace;
 }
 
 /**
