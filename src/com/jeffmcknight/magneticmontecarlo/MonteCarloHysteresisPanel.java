@@ -69,13 +69,13 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
    private CurveFamily mhCurves;
 
    static JFrame frame;
-   private JComboBox mXComboBox;
-   private JComboBox mYComboBox;
-   private JComboBox mZComboBox;
-   private JComboBox dipoleRadiusList;
-   private JComboBox mPackingFractionBox;
-   private JComboBox mRecordCountBox;
-   private JComboBox mAppliedFieldRangeBox;
+   private JComboBox<String> mXComboBox;
+   private JComboBox<String> mYComboBox;
+   private JComboBox<String> mZComboBox;
+   private JComboBox<String> dipoleRadiusList;
+   private JComboBox<String> mPackingFractionBox;
+   private JComboBox<String> mRecordCountBox;
+   private JComboBox<String> mAppliedFieldRangeBox;
    private ButtonGroup mRadioButtonGroup;
    private JRadioButton mCurveRadioButton;
    private JRadioButton mDipoleRadioButton;
@@ -167,9 +167,9 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         int initialComboIndex = 7;
 
         // Create combo boxes for lattice parameters
-        mXComboBox = new JComboBox(LATTICE_ITEMS);
-        mYComboBox = new JComboBox(LATTICE_ITEMS);
-        mZComboBox = new JComboBox(LATTICE_ITEMS);
+        mXComboBox = new JComboBox<String>(LATTICE_ITEMS);
+        mYComboBox = new JComboBox<String>(LATTICE_ITEMS);
+        mZComboBox = new JComboBox<String>(LATTICE_ITEMS);
         dipoleRadiusList = new JComboBox(DIPOLE_RADIUS_OPTIONS);
         mPackingFractionBox = new JComboBox(PACKING_FRACTION_OPTIONS);
         mRecordCountBox = new JComboBox(LATTICE_ITEMS);

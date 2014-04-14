@@ -6,7 +6,6 @@ package com.jeffmcknight.magneticmontecarlo;
 import info.monitorenter.gui.chart.io.FileFilterExtensions;
 
 import java.awt.Dimension;
-import java.awt.GraphicsConfiguration;
 import java.awt.HeadlessException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;

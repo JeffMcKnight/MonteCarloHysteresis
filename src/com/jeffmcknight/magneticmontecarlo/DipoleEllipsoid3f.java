@@ -3,22 +3,21 @@
  */
 package com.jeffmcknight.magneticmontecarlo;
 
-import java.util.ArrayList;
-
 import javax.vecmath.Point3f;
 
 /**
  * @author jeffmcknight
  *
  */
-class DipoleEllipsoid3f extends DipoleSphere3f 
-{
+@SuppressWarnings("serial")
+// No need to serialize objects of this type.
+class DipoleEllipsoid3f extends DipoleSphere3f {
+	
 	DipoleSphere3f[] ellipsoid3f;
 	/**
 	 * 
 	 */
-	public DipoleEllipsoid3f() 
-	{
+	public DipoleEllipsoid3f() {
 		// TODO Auto-generated constructor stub
 	}
 
@@ -27,8 +26,7 @@ class DipoleEllipsoid3f extends DipoleSphere3f
 	 * @param y
 	 * @param z
 	 */
-	public DipoleEllipsoid3f(float x, float y, float z) 
-	{
+	public DipoleEllipsoid3f(float x, float y, float z) {
 		super(x, y, z);
 		// TODO Auto-generated constructor stub
 	}
@@ -39,8 +37,7 @@ class DipoleEllipsoid3f extends DipoleSphere3f
 	 * @param z
 	 * @param r
 	 */
-	public DipoleEllipsoid3f(float x, float y, float z, float r) 
-	{
+	public DipoleEllipsoid3f(float x, float y, float z, float r) {
 		super(x, y, z, r);
 		// TODO Auto-generated constructor stub
 	}
@@ -52,8 +49,7 @@ class DipoleEllipsoid3f extends DipoleSphere3f
 	 * @param r
 	 * @param m
 	 */
-	public DipoleEllipsoid3f(float x, float y, float z, float r, float m) 
-	{
+	public DipoleEllipsoid3f(float x, float y, float z, float r, float m) {
 		super(x, y, z, r, m);
 		// TODO Auto-generated constructor stub
 	}
@@ -61,8 +57,7 @@ class DipoleEllipsoid3f extends DipoleSphere3f
 	/**
 	 * @param point3fNew
 	 */
-	public DipoleEllipsoid3f(Point3f point3fNew) 
-	{
+	public DipoleEllipsoid3f(Point3f point3fNew) {
 		super(point3fNew);
 		// TODO Auto-generated constructor stub
 	}
@@ -71,8 +66,7 @@ class DipoleEllipsoid3f extends DipoleSphere3f
 	 * @param point3fNew
 	 * @param floatNewM
 	 */
-	public DipoleEllipsoid3f(Point3f point3fNew, float floatNewM) 
-	{
+	public DipoleEllipsoid3f(Point3f point3fNew, float floatNewM) {
 		super(point3fNew, floatNewM);
 		// TODO Auto-generated constructor stub
 	}

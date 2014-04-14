@@ -7,25 +7,24 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 /**
- * @author jeffmcknight
+ * @author JeffMcKnight
  *
  */
-public class DipoleSphereArray3f extends ArrayList<DipoleSphere3f> 
-{
+// No need to serialize objects at this time.
+@SuppressWarnings("serial")
+public class DipoleSphereArray3f extends ArrayList<DipoleSphere3f> {
 
 	/**
 	 * 
 	 */
-	public DipoleSphereArray3f() 
-	{
+	public DipoleSphereArray3f() {
 		// TODO Auto-generated constructor stub
 	}
 
 	/**
 	 * @param initialCapacity
 	 */
-	public DipoleSphereArray3f(int initialCapacity) 
-	{
+	public DipoleSphereArray3f(int initialCapacity) {
 		super(initialCapacity);
 		// TODO Auto-generated constructor stub
 	}
@@ -33,8 +32,7 @@ public class DipoleSphereArray3f extends ArrayList<DipoleSphere3f>
 	/**
 	 * @param c
 	 */
-	public DipoleSphereArray3f(Collection<? extends DipoleSphere3f> c) 
-	{
+	public DipoleSphereArray3f(Collection<? extends DipoleSphere3f> c) {
 		super(c);
 		// TODO Auto-generated constructor stub
 	}

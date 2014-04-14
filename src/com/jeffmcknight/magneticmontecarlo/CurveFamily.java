@@ -10,7 +10,7 @@ import java.util.Calendar;
 
 //******************** class - CurveFamily ********************
 /**
- * @author jeffmcknight
+ * @author JeffMckKight
  *
  */
 public class CurveFamily 
@@ -32,7 +32,6 @@ public class CurveFamily
 	private int   mCubeEdgeZ;
 //	private float defaultDipoleRadius = 0.000001f;
 	private float latticeConst = DEFAULT_LATTICE_CONSTANT;
-	private float mMaxH;
 	
 	private MagneticMedia magneticCube;
 	HysteresisCurve[] mhCurveSet;
@@ -65,7 +64,6 @@ public class CurveFamily
 		mPackingFraction = packingFraction;
 		mDipoleRadius = dipoleRadius;
 		latticeConst = 2f * dipoleRadius / packingFraction ; 
-		mMaxH = maximumH;  
 		mCurveFamilyListener = curveFamilyListener; 
 		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, packingFraction, dipoleRadius, null);
 		averageMCurve = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
