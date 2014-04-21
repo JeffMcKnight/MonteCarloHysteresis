@@ -8,6 +8,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
+import com.jeffmcknight.magneticmontecarlo.MagneticMedia.MagneticMediaListener;
+
 //******************** class - CurveFamily ********************
 /**
  * @author JeffMckKight
@@ -41,6 +43,7 @@ public class CurveFamily
    private float mPackingFraction;
    private float mDipoleRadius;
 	private CurveFamilyListener mCurveFamilyListener;
+	private MagneticMediaListener mMagneticMediaListener;
 	
 //	public static final float defaultIndexA  = 1.0f;
 //	float recordedNetMNegative[][] = new float[numberRecordPoints][recordPasses];
@@ -54,6 +57,7 @@ public class CurveFamily
 			float packingFraction, 
 			float dipoleRadius, 
 			float maximumH, 
+			MagneticMediaListener magneticMediaListener, 
 			CurveFamilyListener curveFamilyListener) 
 	{
 		numberRecordPoints   = (int) (2*(DEFAULT_MAXIMUM_H/DEFAULT_RECORD_STEP_SIZE) + 1);
@@ -63,9 +67,10 @@ public class CurveFamily
 		mCubeEdgeZ       = zDim;
 		mPackingFraction = packingFraction;
 		mDipoleRadius = dipoleRadius;
-		latticeConst = 2f * dipoleRadius / packingFraction ; 
+		latticeConst = 2f * dipoleRadius / packingFraction ;
+		mMagneticMediaListener = magneticMediaListener;
 		mCurveFamilyListener = curveFamilyListener; 
-		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, packingFraction, dipoleRadius, null);
+		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, packingFraction, dipoleRadius, mMagneticMediaListener);
 		averageMCurve = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		minMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		maxMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);

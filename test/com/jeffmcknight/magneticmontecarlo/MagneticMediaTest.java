@@ -27,7 +27,7 @@ public class MagneticMediaTest extends TestCase {
 		Point3f point000 = new Point3f(0.0f, 0.0f, 0.0f);
 		Point3f point110 = new Point3f(0.0f, 1.0f, 1.0f);
 
-		MagneticMedia sdpTrivial = new MagneticMedia();
+		MagneticMedia sdpTrivial = new MagneticMedia(1,1,1);
 		assertEquals(1, sdpTrivial.getCellCount());
 
 		MagneticMedia sdpUnitCube = new MagneticMedia(2,2,2);

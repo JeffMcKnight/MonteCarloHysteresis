@@ -31,29 +31,13 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	
 	public interface MagneticMediaListener{
 		void notifyRecordingDone(MagneticMedia magneticMedia);
+		void notifyDipoleStuck(DipoleSphere3f dipoleSphere3f);
 	}
 	
 //**********Constructors**********
-	public MagneticMedia() 
-	{
-		this(1,1,1);
-	}
-		
-	public MagneticMedia(int intSize) 
-	{
-		super(intSize);			// create with "intSize" elements; assumes cube with 1 unit per side
-		this.mLatticeIndex = MonteCarloHysteresisPanel.DEFAULT_INDEX_A;
-		this.mRemnanace = 0.0f;
-		this.mXCount = 1;
-		this.mYCount = 1;
-		this.mZCount = 1;
-		this.populateSequential();
-//		this.RandomizeLattice();
-	}
-		
 	public MagneticMedia(int x, int y, int z) 
 	{
-		super(0);
+		super(x * y * z);
 		this.mLatticeIndex = MonteCarloHysteresisPanel.DEFAULT_INDEX_A;
 		this.mRemnanace = 0.0f;
 		this.mXCount = x;
@@ -63,9 +47,18 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 //		this.RandomizeLattice();
 	}
 	
+	/**
+	 * 
+	 * @param x
+	 * @param y
+	 * @param z
+	 * @param packingFraction
+	 * @param dipoleRadius
+	 * @param updateListener
+	 */
 	public MagneticMedia(int x, int y, int z, float packingFraction, float dipoleRadius, MagneticMediaListener updateListener) 
 	{
-		super(0);
+		super(x * y * z);
 		mLatticeIndex = 2f * dipoleRadius / packingFraction ;
 		mRemnanace = 0.0f;
 		mXCount = x;
@@ -134,15 +127,21 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 		}
 	}
 
-	//**********recordToM()**********
-	public float recordWithAcBias (float hApplied) 
-	{
+	/**
+	 *********** recordWithAcBias() ********** 
+	 * @param hApplied
+	 * @return
+	 */
+	public float recordWithAcBias (float hApplied){
 		float m = 0.0f;
 		for (int i = 0; i < this.getCellCount(); i++) { 
-			this.get(i).setM(this.fixateDipole(i, hApplied)); 
+			// Fixate a single dipole up or down.
+			this.get(i).setM(this.fixateDipole(i, hApplied));
+			// Notifiy listener
+			mUpdateListener.notifyDipoleStuck(this.get(i));
 			m = m + this.get(i).getM(); 
 		}
-		System.out.println(TAG + "recordToM()" 
+		System.out.println(TAG + "\t -- recordWithAcBias()" 
 				+"\t -- mUpdateListener: "+ ((null==mUpdateListener)?"null":mUpdateListener.getClass().getSimpleName())
 				);
 		// TODO: Use this Listener for both MHCurve and individual dipole charts so it will never be null.
@@ -156,11 +155,17 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	//** Fixate the magnetic orientation for a single particle **
 	public float fixateDipole(int i, float appliedHField) 
 	{
+		float fixatedM;
 		float netBField = 0f;
 		float netMField = calculateNetMField(i);
 		netBField = netMField + appliedHField;
-		if (netBField > 0.0f)	{return( MonteCarloHysteresisPanel.SATURATION_M);}
-		else				{return(-MonteCarloHysteresisPanel.SATURATION_M);}
+		if (netBField > 0.0f) {
+			fixatedM = MonteCarloHysteresisPanel.SATURATION_M;
+			}
+		else {
+			fixatedM = -MonteCarloHysteresisPanel.SATURATION_M;
+			}
+		return fixatedM;
 	}
 
 	/**
@@ -177,6 +182,7 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 	}
 	
 	/**
+	 *  TODO: implement using ThreadMessager and ChunkMaker 
 	 * @param i - the index of the dipole where we calculate M, the net magnetic remanence field 
 	 * @return - the net magnetic remanence field, M, at dipole with index "i"
 	 */
@@ -202,6 +208,7 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 		return (mRemnanace/(float)this.size());
 	}
 
+	// ********** Setters and Getters **********
 	public float getDipoleRadius() 
 	{
 		return mDipoleRadius;
@@ -212,7 +219,6 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 		this.mDipoleRadius = dipoleRadius;
 	}
 
-	//	Setters and Getters
 	public float getM() 
 	{
 		return this.mRemnanace;
