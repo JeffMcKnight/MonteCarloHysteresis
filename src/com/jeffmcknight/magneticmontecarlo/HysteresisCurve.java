@@ -64,7 +64,7 @@ public class HysteresisCurve
 	{
 		for (int i = 0; i < mRecordPoint.length; i++) 
 		{
-			mRecordPoint[i].setM( magneticMedia.recordToM(mRecordPoint[i].getH()) );	
+			mRecordPoint[i].setM( magneticMedia.recordWithAcBias(mRecordPoint[i].getH()) );	
 			System.out.print("."); // show progress
 		}
 	} 	// END ******************** HysteresisCurve() ********************

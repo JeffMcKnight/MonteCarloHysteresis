@@ -6,7 +6,6 @@ package com.jeffmcknight.magneticmontecarlo;
 import info.monitorenter.gui.chart.io.FileFilterExtensions;
 
 import java.awt.Dimension;
-import java.awt.GraphicsConfiguration;
 import java.awt.HeadlessException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -30,8 +29,8 @@ public class Monte_Carlo_Hysteresis_Application extends JFrame
    /**
     * 
     */
-   public static final String VERSION_NUMBER = "0.8.5";
-   public static final String VERSION_SUFFIX = "0-8-5";
+   public static final String VERSION_NUMBER = "0.8.10";
+   public static final String VERSION_SUFFIX = "0-8-10";
    public static final String TAG = Monte_Carlo_Hysteresis_Application.class.getSimpleName();
    private static final long serialVersionUID = 5700991704955056064L;
    public static final String TITLE_BAR_TEXT = "Monte Carlo Hysteresis " + VERSION_NUMBER;

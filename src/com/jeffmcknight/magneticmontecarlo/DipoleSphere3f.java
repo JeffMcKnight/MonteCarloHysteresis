@@ -1,7 +1,6 @@
 package com.jeffmcknight.magneticmontecarlo;
 
 import javax.vecmath.Point3f;
-import javax.vecmath.Tuple3f;
 import javax.vecmath.Vector3f;
 
 public class DipoleSphere3f extends Point3f 
@@ -16,8 +15,7 @@ public class DipoleSphere3f extends Point3f
 
 	
 	//**********Constructors**********
-	public DipoleSphere3f() 
-	{
+	public DipoleSphere3f() {
 		super();
 		this.m= 0.0f;
 		this.radius = DipoleSphere3f.floatDefaultDipoleR; 
@@ -26,40 +24,35 @@ public class DipoleSphere3f extends Point3f
 //		this.volume = (float) ((4.0f/3.0f) * Math.PI * Math.pow(this.radius, 3));
 	}
 
-	public DipoleSphere3f(float x, float y, float z) 
-	{
+	public DipoleSphere3f(float x, float y, float z) {
 		super(x, y, z);
 		this.m = 0.0f;
 		this.radius = DipoleSphere3f.floatDefaultDipoleR; 
 		this.setVolume((float) ((4.0f/3.0f) * Math.PI * Math.pow(this.getRadius(), 3)));
 	}
 
-	public DipoleSphere3f(float x, float y, float z, float r) 
-	{
+	public DipoleSphere3f(float x, float y, float z, float r) {
 		super(x, y, z);
 		this.m = 0.0f;
 		this.radius = r; 
 		this.setVolume((float) ((4.0f/3.0f) * Math.PI * Math.pow(this.getRadius(), 3)));
 	}
 
-	public DipoleSphere3f(float x, float y, float z, float r, float m) 
-	{
+	public DipoleSphere3f(float x, float y, float z, float r, float m) {
 		super(x, y, z);
 		this.m = m;
 		this.radius = r; 
 		this.setVolume((float) ((4.0f/3.0f) * Math.PI * Math.pow(this.getRadius(), 3)));
 	}
 
-	public DipoleSphere3f(Point3f point3fNew) 
-	{
+	public DipoleSphere3f(Point3f point3fNew) {
 		super(point3fNew);
 		this.m= 0.0f;
 		this.radius = DipoleSphere3f.floatDefaultDipoleR; 
 		this.setVolume((float) ((4.0f/3.0f) * Math.PI * Math.pow(this.getRadius(), 3)));
 	}
 
-	public DipoleSphere3f(Point3f point3fNew, float floatNewM) 
-	{
+	public DipoleSphere3f(Point3f point3fNew, float floatNewM) {
 		super(point3fNew);
 		this.m = floatNewM;
 		this.radius = DipoleSphere3f.floatDefaultDipoleR; 
@@ -72,8 +65,7 @@ public class DipoleSphere3f extends Point3f
 	
 	//**********getHInteraction()**********
 	//** Calculate H at "this" particle due to dipole1 **
-	public float getHInteraction (DipoleSphere3f dipoleFixed) 
-	{
+	public float getHInteraction (DipoleSphere3f dipoleFixed) {
 		Vector3f vectorFocus = new Vector3f();							//	relative vector between dipoles
 		double r = this.distance(dipoleFixed);								//	distance between dipoles
 		double theta;													//	angle between ^Z and relative dipole vector
@@ -95,43 +87,36 @@ public class DipoleSphere3f extends Point3f
 	}
 
 	//**********Getters and Setters **********
-	public float getM() 
-	{
+	public float getM() {
 		return m;
 	}
-	public void setM(float m) 
-	{
+	
+	public void setM(float m) {
 		this.m = m;
 	}
 
-	public void setMUp() 
-	{
+	public void setMUp() {
 		this.m = MonteCarloHysteresisPanel.SATURATION_M;
 	}
 
-	public void setMDown() 
-	{
+	public void setMDown() {
 		this.m = -MonteCarloHysteresisPanel.SATURATION_M;
 	}
 
-	public float getRadius() 
-	{
+	public float getRadius() {
 		return radius;
 	}
 
-	public void setRadius(float radius) 
-	{
+	public void setRadius(float radius) {
 		this.radius = radius;
 	}
 
-	public float getVolume() 
-	{
+	public float getVolume() {
 //		return (float) ((4.0f/3.0f) * Math.PI * Math.pow(this.getRadius(), 3)); 
 		return (float) volume; 
 	}
 
-	public void setVolume(float volume) 
-	{
+	public void setVolume(float volume) {
 		this.volume = volume;
 	}
 
