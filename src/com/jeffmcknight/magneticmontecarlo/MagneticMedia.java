@@ -1,6 +1,8 @@
 package com.jeffmcknight.magneticmontecarlo;
 
 //import java.util.*;
+import com.sun.istack.internal.Nullable;
+
 import java.util.ArrayList;
 //import java.util.List;
 
@@ -27,6 +29,7 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 //	private float hDC;					// Applied DC magnetic field
 //	@SuppressWarnings("rawtypes")
 //	private ArrayList arrayList;			// Set of dipole particles in SDP assembly
+	@Nullable
 	private MagneticMediaListener mUpdateListener;
 	
 	public interface MagneticMediaListener{
@@ -137,8 +140,10 @@ public class MagneticMedia extends ArrayList<DipoleSphere3f>
 		for (int i = 0; i < this.getCellCount(); i++) { 
 			// Fixate a single dipole up or down.
 			this.get(i).setM(this.fixateDipole(i, hApplied));
-			// Notifiy listener
-			mUpdateListener.notifyDipoleStuck(this.get(i));
+			// Notify listener
+			if (mUpdateListener != null) {
+				mUpdateListener.notifyDipoleStuck(this.get(i));
+			}
 			m = m + this.get(i).getM(); 
 		}
 		System.out.println(TAG + "\t -- recordWithAcBias()" 
