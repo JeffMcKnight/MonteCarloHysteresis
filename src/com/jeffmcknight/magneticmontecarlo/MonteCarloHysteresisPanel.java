@@ -1,8 +1,6 @@
-/*
- */ 
-
 package com.jeffmcknight.magneticmontecarlo;
 
+import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry;
 import info.monitorenter.gui.chart.Chart2D;
 import info.monitorenter.gui.chart.ITrace2D;
 import info.monitorenter.gui.chart.traces.Trace2DSimple;
@@ -32,15 +30,14 @@ import javax.swing.SwingConstants;
 
 import com.jeffmcknight.magneticmontecarlo.CurveFamily.CurveFamilyListener;
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.MagneticMediaListener;
+import org.jetbrains.annotations.Nullable;
 
-//******************** class - MonteCarloHysteresisPanel ********************
-public class MonteCarloHysteresisPanel extends JPanel implements ActionListener 
-{
 /**
-    * 
-    */
-	private static final String TAG = MonteCarloHysteresisPanel.class.getSimpleName();
-   private static final long serialVersionUID = 5824180412325621552L;
+ *
+ */
+public class MonteCarloHysteresisPanel extends JPanel implements ActionListener {
+    private static final String TAG = MonteCarloHysteresisPanel.class.getSimpleName();
+    private static final long serialVersionUID = 5824180412325621552L;
    public static final int DEFAULT_BORDER_SPACE = 30;
    public static final int DEFAULT_APPLIED_FIELD_ITEM = 0;
    public static final float SATURATION_M    = 100.0f;
@@ -97,26 +94,27 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
    private MovingAverageTrace2D mTwoPointAverageTrace;
    private MovingAverageTrace2D mScaledWindowTrace;
    private MovingAverageTrace2D mScaledTotalTrace;
+    private final ViewModel viewModel = new ViewModel();
 
-    public MonteCarloHysteresisPanel() 
+    public MonteCarloHysteresisPanel()
     {
     	mCurveTraceCount = 0;
     	mDipoleTraceCount = 0;
     	CurveFamily.getDefaultRecordPoints();
     	mActiveChart = ChartType.MH_CURVE;
-        // Create a chart:  
+        // Create a chart:
         mhChart = new Chart2D();
         // Create a frame.
         this.setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-        
+
         mControlsPanel = new JPanel();
         mControlsPanel.setLayout(new BoxLayout(mControlsPanel, BoxLayout.PAGE_AXIS));
         this.add(mControlsPanel);
-        
+
         mChartPanel = new JPanel();
         mChartPanel.setLayout(new BoxLayout(mChartPanel, BoxLayout.X_AXIS));
         this.add(mChartPanel);
-        
+
         buildRunConfigPanel();
         showChart(mChartPanel);
         implementDipoleChartListener();
@@ -124,19 +122,19 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         implementCurveFamilyListener();
         } // END constructor
 
-    /*
+    /**
      * Redraws dipole chart when the MagneticMedia notifies that it has updated itself
      */
 	private void implementDipoleChartListener() {
 		mDipoleUpdateListener = new MagneticMediaListener() {
     		@Override
-    		public void notifyRecordingDone(MagneticMedia magneticMedia) {
+    		public void onRecordingDone(MagneticMedia magneticMedia) {
     			showDipoleTraces(magneticMedia);
     		}
 
 			@Override
-			public void notifyDipoleStuck(DipoleSphere3f dipoleSphere3f) {
-				System.out.println(TAG 
+			public void onDipoleFixated(@Nullable DipoleSphere3f dipoleSphere3f) {
+				System.out.println(TAG
 						+ "\t -- notifyDipoleStuck()"
 						+ "\t -- dipoleSphere3f.getM(): " + dipoleSphere3f.getM()
 						);
@@ -144,7 +142,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
     	};
 	}
 
-    /*
+    /**
      * Redraws MH CurveFamily chart when the CurveFamily object notifies that it has updated itself
      */
 	private void implementCurveFamilyListener() {
@@ -156,28 +154,28 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
 		};
 	}
 
-    /*
-     * 
+    /**
+     *
      */
     private void implementCurveChartListener() {
     	mChartUpdateListener = new MagneticMediaListener() {
     		@Override
-    		public void notifyRecordingDone(MagneticMedia magneticMedia) {
+    		public void onRecordingDone(MagneticMedia magneticMedia) {
     			// TODO - stub
     		}
 
 			@Override
-			public void notifyDipoleStuck(DipoleSphere3f dipoleSphere3f) {
+			public void onDipoleFixated(@Nullable DipoleSphere3f dipoleSphere3f) {
 				// TODO Auto-generated method stub
-				
+
 			}
     	};
     }
 
 // *************** buildRunConfigPanel() ***************
    /**
-    * Build JPanel on left side of JFrame that contains 
-    * labeled JComboBoxes to set simulation parameters 
+    * Build JPanel on left side of JFrame that contains
+    * labeled JComboBoxes to set simulation parameters
     */
    public void buildRunConfigPanel()
    {
@@ -195,7 +193,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         mCurveRadioButton = new JRadioButton();
         mCurveRadioButton.setText(CURVE_BUTTON_TEXT);
         mCurveRadioButton.setSelected(true);
-        
+
         mDipoleRadioButton = new JRadioButton();
         mDipoleRadioButton.setText(DIPOLE_BUTTON_TEXT);
 
@@ -217,17 +215,17 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         mControlsPanel.add(xComboBoxPanel);
         mControlsPanel.add(yComboBoxPanel);
         mControlsPanel.add(zComboBoxPanel);
-        // Add separator line 
+        // Add separator line
         mControlsPanel.add(new JSeparator(SwingConstants.HORIZONTAL));
         // Add combo box panels for dipole radius, packing fraction, etc
         mControlsPanel.add(dipoleRadiusPanel);
         mControlsPanel.add(packingFractionPanel);
         mControlsPanel.add(recordCountPanel);
         mControlsPanel.add(mAppliedFieldRangePanel);
-        
+
         // Add vertical space between combo buttons and radio buttons
-        mControlsPanel.add(Box.createRigidArea(new Dimension(0, 20)));	
-        
+        mControlsPanel.add(Box.createRigidArea(new Dimension(0, 20)));
+
         mControlsPanel.add(mCurveRadioButton);
         mControlsPanel.add(mDipoleRadioButton);
         mCurveRadioButton.addActionListener(new ActionListener() {
@@ -244,7 +242,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
 		});
 
         // Add vertical space between radio buttons and run JButton
-        mControlsPanel.add(Box.createRigidArea(new Dimension(0, 20)));	
+        mControlsPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
         // Add run JButton
         JButton buttonRun;
@@ -261,7 +259,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         buttonRunPanel.setAlignmentX(LEFT_ALIGNMENT);
         buttonRun.setAlignmentX(Component.RIGHT_ALIGNMENT);
         mControlsPanel.add(buttonRunPanel);
-        
+
         mControlsPanel.add(Box.createVerticalStrut(300));
 
         // Add border padding around entire panel
@@ -270,7 +268,7 @@ public class MonteCarloHysteresisPanel extends JPanel implements ActionListener
         		DEFAULT_BORDER_SPACE,
         		DEFAULT_BORDER_SPACE,
         		DEFAULT_BORDER_SPACE));
-        
+
         mControlsPanel.setMaximumSize(new Dimension(200,600));
    }
 
@@ -313,13 +311,13 @@ protected void showDipoleTraces(MagneticMedia magneticMedia) {
  */
 private ITrace2D buildTrace(int fastAveragePeriod, MagneticMedia magneticCube, Color traceColor) {
 	ITrace2D trace;
-    // Increment the count and update the color 
+    // Increment the count and update the color
     // to display multiple traces on the same chart.
 	mDipoleTraceCount = mDipoleTraceCount  + 1;
     String traceName = buildTraceName(DIPOLE_CHART_TITLE, mDipoleTraceCount, fastAveragePeriod, magneticCube);
-    
-    trace = new Trace2DSimple(); 
-    // Set trace properties (name, color, point shape to disc) 
+
+    trace = new Trace2DSimple();
+    // Set trace properties (name, color, point shape to disc)
     trace.setName(traceName);
     trace.setColor(traceColor);
     trace.setTracePainter(new TracePainterDisc());
@@ -336,22 +334,22 @@ private String chartDescription(int fastAveragePeriod) {
 		string = "Total (Normalized to " + SATURATION_M + ")";
 		break;
 	default:
-		string = "Moving Average over " + fastAveragePeriod + " dipoles"; 
+		string = "Moving Average over " + fastAveragePeriod + " dipoles";
 		break;
 	}
 	return string;
 }
 
 /**
- * @param title 
+ * @param title
  * @param count TODO
  * @param fastAveragePeriod
  * @param magneticMedia TODO
  * @return
  */
-private String buildTraceName(String title, 
-		int count, 
-		int fastAveragePeriod, 
+private String buildTraceName(String title,
+		int count,
+		int fastAveragePeriod,
 		MagneticMedia magneticMedia) {
 	Calendar calendar = Calendar.getInstance();
     calendar.setTimeInMillis(System.currentTimeMillis());
@@ -424,13 +422,15 @@ protected void showMhCurveChart() {
       panel.add(comboBox);
       panel.setAlignmentX(Component.LEFT_ALIGNMENT);
       panel.setMaximumSize(new Dimension(300, 0));
-      
+
       return panel;
    }
 
-    //******************** actionPerformed() ********************
-   // Implements ActionListener callback method
-    public void actionPerformed(ActionEvent e) 
+    /**
+     * Implements ActionListener callback method
+     * @param e
+     */
+    public void actionPerformed(ActionEvent e)
     {
     	// Capture input from all combo boxes
         int xAxisCount = Integer.parseInt((String) mXComboBox.getSelectedItem());
@@ -449,71 +449,49 @@ protected void showMhCurveChart() {
         System.out.println("maxAppliedField: " + maxAppliedField);
 
         // Run simulation if run button is clicked
-		if ( e.getActionCommand().equals(RUN_SIMULATION) ) 
+		if ( e.getActionCommand().equals(RUN_SIMULATION) )
 		{
-			switch (mActiveChart) {
+            MediaGeometry geometry = new MediaGeometry(xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius);
+            switch (mActiveChart) {
+                case DIPOLE_AVERAGES:
+                    viewModel.record(1.0F, geometry);
 			case MH_CURVE:
 				mhCurves = new CurveFamily(
-						recordCount, 
-						xAxisCount, 
-						yAxisCount, 
-						zAxisCount, 
-						packingFraction, 
-						dipoleRadius, 
-						maxAppliedField, 
-						mChartUpdateListener, 
+						recordCount,
+						xAxisCount,
+						yAxisCount,
+						zAxisCount,
+						packingFraction,
+						dipoleRadius,
+						maxAppliedField,
+						mChartUpdateListener,
 						mCurveFamilyListener);
 				mhCurves.recordMHCurves();
 				break;
 			case MH_CURVE_POINT:
-				mMagneticMedia = new MagneticMedia(xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius, mDipoleUpdateListener);
-				mMagneticMedia.randomizeLattice();
+				mMagneticMedia = MagneticMedia.Companion.create(geometry, mDipoleUpdateListener);
 				mMagneticMedia.recordWithAcBias(maxAppliedField);
 				break;
 			default:
 				break;
 			}
 		}
-        
+
     } // END ******************** actionPerformed() ********************
 
 
-  //******************** createAndShowGUI() ********************
-    /**
-     * Create the GUI and show it.  For thread safety,
-     * this method should only be invoked from the
-     * event-dispatching thread.
-    * @param panel TODO
-     */
-/*    
-    private static void createAndShowGUI() 
-    {
-        //Create and set up the window.
-        JFrame frame = new JFrame(BERTRAM_MONTE_CARLO);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        //Create and set up the content pane.
-        JComponent newContentPane = new MonteCarloHysteresisPanel();
-        newContentPane.setOpaque(true); //content panes must be opaque
-        frame.setContentPane(newContentPane);
-
-        //Display the window.
-        frame.pack();
-        frame.setVisible(true);
-    }
-*/
     public void showChart(JPanel panel)
     {
        // Set chart axis titles
        mhChart.getAxisX().getAxisTitle().setTitle("H [nWb]");
        mhChart.getAxisY().getAxisTitle().setTitle("M");
 
-       // Show chart grids for both x and y axis 
+       // Show chart grids for both x and y axis
        mhChart.getAxisX().setPaintGrid(true);
        mhChart.getAxisY().setPaintGrid(true);
 
        // Make it visible:
-       // add the chart to the frame: 
+       // add the chart to the frame:
        panel.add(mhChart);
        panel.setMinimumSize(new Dimension(800, 600));
        panel.setLocation(0, 0);
@@ -527,20 +505,20 @@ protected void showMhCurveChart() {
     */
    public void addMhPoints(CurveFamily chartCurves, ITrace2D trace)
    {
-      // Increment the count and update the color 
+      // Increment the count and update the color
       // to display multiple traces on the same chart.
       mCurveTraceCount = mCurveTraceCount  + 1;
       traceColor = Color.getHSBColor(traceHue, 1f, 0.85f);
       traceHue = (traceHue + 0.22f);
       String traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, mhCurves.getMagneticCube());
-      
-      trace = new Trace2DSimple(); 
-      // Set trace properties (name, color, point shape to disc) 
+
+      trace = new Trace2DSimple();
+      // Set trace properties (name, color, point shape to disc)
       trace.setName(traceName);
       trace.setColor(traceColor);
       trace.setTracePainter(new TracePainterDisc());
-      // Add the trace to the chart. This has to be done before adding points (deadlock prevention): 
-      mhChart.addTrace(trace);    
+      // Add the trace to the chart. This has to be done before adding points (deadlock prevention):
+      mhChart.addTrace(trace);
 
       for(int i=0; i<chartCurves.getAverageMCurve().getLength(); i++)
     	{
@@ -562,19 +540,4 @@ protected void showMhCurveChart() {
       return mhCurves;
    }
 
-    
-/*
-    public static void main(String[] args) 
-    {
-    	//Schedule a job for the event-dispatching thread:
-        //creating and showing this application's GUI.
-        javax.swing.SwingUtilities.invokeLater(new Runnable() 
-        {
-            public void run() 
-            {
-                createAndShowGUI();
-            }
-        });
-    }
-*/
 }
