@@ -9,6 +9,7 @@ import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
 import java.awt.HeadlessException
 import javax.swing.*
+import kotlin.system.exitProcess
 
 // ********** class - Monte_Carlo_Hysteresis_Application **********
 /**
@@ -109,6 +110,7 @@ class MonteCarloHysteresisApplication : JFrame() {
         with(mQuitMenuItem){
             accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_Q, mPrimaryModifierKey)
             accessibleContext.accessibleDescription = QUIT_MENU_ITEM_DESCRIPTION
+            addActionListener { exitProcess(0) }
         }
         with(mFileMenu) {
             mnemonic = KeyEvent.VK_F
