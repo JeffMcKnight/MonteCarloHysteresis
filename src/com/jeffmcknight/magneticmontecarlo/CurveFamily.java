@@ -416,7 +416,7 @@ private void writeParametersToFile()
 //	DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'TimeZone.getDefault().getDisplayName(true, TimeZone.SHORT)' ");
 	String stringDate = df.format(Calendar.getInstance().getTime());
 	
-	WriteToFile.write("Version," + Monte_Carlo_Hysteresis_Application.VERSION_NUMBER);
+	WriteToFile.write("Version," + MonteCarloHysteresisApplication.VERSION_NUMBER);
 	WriteToFile.appendNewLine();
 	WriteToFile.write("Username," + System.getProperty("user.name"));
 	WriteToFile.appendNewLine();
