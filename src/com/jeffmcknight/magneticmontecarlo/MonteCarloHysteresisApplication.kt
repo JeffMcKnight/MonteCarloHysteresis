@@ -4,6 +4,8 @@
 package com.jeffmcknight.magneticmontecarlo
 
 import info.monitorenter.gui.chart.io.FileFilterExtensions
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.MainScope
 import java.awt.Dimension
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
@@ -15,11 +17,15 @@ import kotlin.system.exitProcess
 /**
  * The application launcher class.  The JVM launcher runs [main] to start the application.
  *
+ * TODO: get the coroutine scopes right; GlobalScope works, but the linter is not happy; maybe [MainScope]?
  * TODO: add a [JFileChooser] to select files to export [DipoleSphere3f] lists
- * TODO: handle [HeadlessException]s
+ * TODO: handle [HeadlessException]s?
  * @author jeffmcknight
  */
 class MonteCarloHysteresisApplication : JFrame() {
+
+    private val coroutineScope = GlobalScope
+    private val viewModel: ViewModel by lazy { ViewModel(coroutineScope) }
     private val mPrimaryModifierKey: Int
     private val mOperatingSystem: OperatingSystem
     /** the File Menu */
@@ -33,12 +39,11 @@ class MonteCarloHysteresisApplication : JFrame() {
     private val mSaveMenuItem = JMenuItem(SAVE_MENU_ITEM_NAME, KeyEvent.VK_S)
     /**
      * the Quit item in the File Menu
-     * TODO: implement addActionListener
      */
     private val mQuitMenuItem = JMenuItem(QUIT_MENU_ITEM_NAME, KeyEvent.VK_Q)
 
     /** The [JPanel] that displays the simulation data */
-    private val mContentPane = MonteCarloHysteresisPanel().apply { isOpaque = true }
+    private val mContentPane = MonteCarloHysteresisPanel(viewModel, coroutineScope).apply { isOpaque = true }
 
     enum class OperatingSystem {
         MacOSX, Windows, Linux, Unknown
@@ -107,7 +112,7 @@ class MonteCarloHysteresisApplication : JFrame() {
             accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_E, mPrimaryModifierKey)
             accessibleContext.accessibleDescription = EXPORT_MENU_ITEM_DESCRIPTION
         }
-        with(mQuitMenuItem){
+        with(mQuitMenuItem) {
             accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_Q, mPrimaryModifierKey)
             accessibleContext.accessibleDescription = QUIT_MENU_ITEM_DESCRIPTION
             addActionListener { exitProcess(0) }

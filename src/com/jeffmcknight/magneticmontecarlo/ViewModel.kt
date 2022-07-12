@@ -5,11 +5,15 @@ import com.jeffmcknight.magneticmontecarlo.MagneticMedia.MagneticMediaListener
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlin.coroutines.coroutineContext
 
-class ViewModel {
-    private val job: Job = SupervisorJob()
-    private val recordingDoneFlo = MutableSharedFlow<MagneticMedia>()
+class ViewModel(private val coroutineScope: CoroutineScope) {
+
+    /**
+     * Emits the last [MagneticMedia] that was recorded
+     * TODO: I think we'll want this to be a StateFlow once everything is routing through it
+     */
+    val recordingDoneFlo = MutableSharedFlow<MagneticMedia>()
+
     val updateListener = object: MagneticMediaListener {
         /**
          * Emit to recordingDoneFlo when the recording completes
@@ -30,16 +34,12 @@ class ViewModel {
 
     }
 
-    private suspend fun handleRecordingDone(magneticMedia: MagneticMedia) {
-        coroutineScope {
+    fun recordSingle(maxAppliedField: Float, geometry: MediaGeometry) {
+        coroutineScope.launch {
+            val magneticMedia = create(geometry, null)
+            magneticMedia.recordWithAcBias(maxAppliedField)
             recordingDoneFlo.emit(magneticMedia)
         }
-    }
-
-    suspend fun recordSingle(maxAppliedField: Float, geometry: MediaGeometry) {
-        coroutineScope {  }
-        val mMagneticMedia = create(geometry, null)
-        mMagneticMedia.recordWithAcBias(maxAppliedField)
 
 
     }
