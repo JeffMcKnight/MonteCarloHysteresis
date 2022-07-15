@@ -202,7 +202,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
      * Build JPanel on left side of JFrame that contains
      * labeled JComboBoxes to set simulation parameters
      */
-    fun buildRunConfigPanel() {
+    private fun buildRunConfigPanel() {
         val initialComboIndex = 8
 
         // Create combo boxes for lattice parameters
@@ -341,13 +341,11 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     }
 
     private fun chartDescription(fastAveragePeriod: Int): String {
-        val string: String
-        string = when (fastAveragePeriod) {
+        return when (fastAveragePeriod) {
             0 -> "Cumulative Average"
             -1 -> "Total (Normalized to " + SATURATION_M + ")"
             else -> "Moving Average over $fastAveragePeriod dipoles"
         }
-        return string
     }
 
     /**
@@ -392,7 +390,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 .toString()
     }
 
-    protected fun showMhCurveChart() {
+    private fun showMhCurveChart() {
         mActiveChart = ChartType.MH_CURVE
         mAppliedFieldRangeBox.name = APPLIED_FIELD_RANGE_LABEL
         bhChart.axisX.axisTitle.title = "H [nWb]"
@@ -429,7 +427,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         return panel
     }
 
-    fun getMediaGeometry(): MediaGeometry {
+    private fun getMediaGeometry(): MediaGeometry {
         // Capture input from all combo boxes
         val xAxisCount: Int = (mXComboBox.selectedItem as Int)
         println("xAxisCount: $xAxisCount")
@@ -449,10 +447,9 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
      * @param e
      */
     override fun actionPerformed(e: ActionEvent) {
-
         val actionCommand: String = e.actionCommand
         runSimulation(actionCommand)
-    } // END ******************** actionPerformed() ********************
+    }
 
     public fun runSimulation(actionCommand: String) {
         val recordCount: Int = (mRecordCountBox.selectedItem as Int)
@@ -463,7 +460,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         // Run simulation if run button is clicked
         if (actionCommand == RUN_SIMULATION) {
             when (mActiveChart) {
-                ChartType.DIPOLE_AVERAGES -> viewModel.recordPoint()
+                ChartType.DIPOLE_AVERAGES -> viewModel.recordMultiple()
                 ChartType.MH_CURVE -> {
                     mhCurves = CurveFamily(
                             recordCount,
@@ -473,14 +470,14 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                             mCurveFamilyListener)
                     mhCurves!!.recordMHCurves()
                 }
-                ChartType.MH_CURVE_POINT -> viewModel.recordSingle(maxAppliedField, geometry)
+                ChartType.MH_CURVE_POINT -> viewModel.recordSingle()
             }
         }
     }
 
     private fun getAppliedField() = (mAppliedFieldRangeBox.selectedItem as Float)
 
-    fun showChart(panel: JPanel) {
+    private fun showChart(panel: JPanel) {
         // Set chart axis titles
         bhChart.axisX.axisTitle.title = "H [nWb]"
         bhChart.axisY.axisTitle.title = "B"
@@ -501,7 +498,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
      * @param chartCurves
      * @param trace
      */
-    fun addMhPoints(chartCurves: CurveFamily, trace: ITrace2D?) {
+    private fun addMhPoints(chartCurves: CurveFamily, trace: ITrace2D?) {
         // Increment the count and update the color
         // to display multiple traces on the same chart.
         mCurveTraceCount = mCurveTraceCount + 1

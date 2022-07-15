@@ -46,15 +46,15 @@ class ViewModel(private val coroutineScope: CoroutineScope) {
         DipoleAverages(floatList, accum.count)
     }
 
-    fun recordSingle(maxAppliedField: Float, geometry: MediaGeometry) {
+    fun recordSingle() {
         coroutineScope.launch {
-            val magneticMedia = create(geometry, null)
-            magneticMedia.recordWithAcBias(maxAppliedField)
+            val magneticMedia = create(mediaGeometry, null)
+            magneticMedia.recordWithAcBias(appliedField)
             recordSingleFlo.emit(magneticMedia)
         }
     }
 
-    fun recordPoint() {
+    fun recordMultiple() {
         for (i in 1..recordCount) {
             coroutineScope.launch {
                 val magneticMedia = create(mediaGeometry, null)
