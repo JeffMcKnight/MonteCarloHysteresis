@@ -9,7 +9,6 @@ import info.monitorenter.gui.chart.ITrace2D
 import info.monitorenter.gui.chart.traces.Trace2DSimple
 import info.monitorenter.gui.chart.traces.painters.TracePainterDisc
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.awt.Color
@@ -31,9 +30,15 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     // @return mhCurves
     var mhCurves: CurveFamily? = null
         private set
-    private val mXComboBox = JComboBox(LATTICE_SIZES)
-    private val mYComboBox = JComboBox(LATTICE_SIZES)
-    private val mZComboBox = JComboBox(LATTICE_SIZES)
+    private val mXComboBox = JComboBox(LATTICE_SIZES).apply {
+        addItemListener { (it.item as? Int)?.let { dimen -> viewModel.setLatticeDimenX(dimen) } }
+    }
+    private val mYComboBox = JComboBox(LATTICE_SIZES).apply {
+        addItemListener { (it.item as? Int)?.let { dimen -> viewModel.setLatticeDimenY(dimen) } }
+    }
+    private val mZComboBox = JComboBox(LATTICE_SIZES).apply {
+        addItemListener { (it.item as? Int)?.let { dimen -> viewModel.setLatticeDimenZ(dimen) } }
+    }
     private val dipoleRadiusList = JComboBox(DIPOLE_RADIUS_OPTIONS)
     private val mPackingFractionBox = JComboBox(PACKING_FRACTION_OPTIONS)
     private val mRecordCountBox = JComboBox(LATTICE_ITEMS)
@@ -84,10 +89,30 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
 
         //FIXME: is this the right scope/way to collect items emitted by recordingDoneFlo ?
         coroutineScope.launch {
-            viewModel.recordingDoneFlo.collect {
+            viewModel.recordSingleFlo.collect {
                 showDipoleTraces(it)
             }
         }
+        coroutineScope.launch {
+            viewModel.dipoleAverageFlo.collect {
+                showDipoleAverages(it)
+            }
+        }
+    }
+
+    private fun showDipoleAverages(dipoleAverages: List<Float>) {
+        mAppliedFieldRangeBox.name = "mAppliedFieldRangeBox"
+        val dipoleAveragesTrace = Trace2DSimple().apply {
+            name = "Averages Dipoles; Ordered by Coercivity"
+            color = Color.GREEN.darker()
+            setTracePainter(TracePainterDisc())
+        }
+        with(bhChart) {
+            removeAllTraces()
+            addTrace(dipoleAveragesTrace)
+            axisX.axisTitle.title = "n [Dipole rank by coercivity]"
+        }
+        dipoleAverages.forEachIndexed { index, dipoleH -> dipoleAveragesTrace.addPoint(index.toDouble(), dipoleH.toDouble()) }
     }
 
     /**
@@ -363,55 +388,63 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         return panel
     }
 
-    /**
-     * Implements ActionListener callback method
-     * @param e
-     */
-    override fun actionPerformed(e: ActionEvent) {
+    fun getMediaGeometry(): MediaGeometry {
         // Capture input from all combo boxes
         val xAxisCount: Int = (mXComboBox.selectedItem as? Int) ?:
-            throw IllegalArgumentException("mXComboBox should contain Integers")
+        throw IllegalArgumentException("mXComboBox should contain Integers")
         println("xAxisCount: $xAxisCount")
         val yAxisCount: Int = (mYComboBox.selectedItem as? Int) ?:
-            throw IllegalArgumentException("mYComboBox should contain Integers")
+        throw IllegalArgumentException("mYComboBox should contain Integers")
         println("yAxisCount: $yAxisCount")
         val zAxisCount: Int = (mZComboBox.selectedItem as? Int) ?:
-            throw IllegalArgumentException("mZComboBox should contain Integers")
+        throw IllegalArgumentException("mZComboBox should contain Integers")
         println("zAxisCount: $zAxisCount")
         val dipoleRadius: Float = (dipoleRadiusList.selectedItem as? String)?.toFloat() ?: 0F
         println("dipoleRadius: $dipoleRadius")
         val packingFraction: Float = (mPackingFractionBox.selectedItem as? String)?.toFloat() ?: 0F
         println("packingFraction: $packingFraction")
+        return MediaGeometry(xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius)
+    }
+
+    /**
+     * Implements ActionListener callback method
+     * @param e
+     */
+    override fun actionPerformed(e: ActionEvent) {
+
+        val actionCommand: String = e.actionCommand
+        runSimulation(actionCommand)
+    } // END ******************** actionPerformed() ********************
+
+    public fun runSimulation(actionCommand: String) {
         val recordCount: Int = (mRecordCountBox.selectedItem as? String)?.toInt() ?: 0
         println("recordCount: $recordCount")
-        val maxAppliedField: Float = (mAppliedFieldRangeBox.selectedItem as? String)?.toFloat() ?: 0F
+        val geometry: MediaGeometry = getMediaGeometry()
+        val maxAppliedField: Float = getAppliedField()
         println("maxAppliedField: $maxAppliedField")
-
         // Run simulation if run button is clicked
-        if (e.actionCommand == RUN_SIMULATION) {
-            val geometry = MediaGeometry(xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius)
+        if (actionCommand == RUN_SIMULATION) {
             when (mActiveChart) {
-                ChartType.DIPOLE_AVERAGES -> viewModel.recordSingle(maxAppliedField, geometry)
+                ChartType.DIPOLE_AVERAGES -> viewModel.recordPoint(maxAppliedField, geometry)
                 ChartType.MH_CURVE -> {
                     mhCurves = CurveFamily(
                             recordCount,
-                            xAxisCount,
-                            yAxisCount,
-                            zAxisCount,
-                            packingFraction,
-                            dipoleRadius,
+                            geometry,
                             maxAppliedField,
                             mChartUpdateListener,
                             mCurveFamilyListener)
                     mhCurves!!.recordMHCurves()
                 }
                 ChartType.MH_CURVE_POINT -> {
+                    viewModel.recordSingle(maxAppliedField, geometry)
                     mMagneticMedia = create(geometry, mDipoleUpdateListener)
                     mMagneticMedia!!.recordWithAcBias(maxAppliedField)
                 }
             }
         }
-    } // END ******************** actionPerformed() ********************
+    }
+
+    fun getAppliedField() = (mAppliedFieldRangeBox.selectedItem as? String)?.toFloat() ?: 0F
 
     fun showChart(panel: JPanel) {
         // Set chart axis titles
@@ -437,11 +470,11 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     fun addMhPoints(chartCurves: CurveFamily, trace: ITrace2D?) {
         // Increment the count and update the color
         // to display multiple traces on the same chart.
-        var trace = trace
         mCurveTraceCount = mCurveTraceCount + 1
         traceColor = Color.getHSBColor(traceHue, 1f, 0.85f)
         traceHue = traceHue + 0.22f
         val traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, mhCurves!!.magneticCube)
+        var trace = trace
         trace = Trace2DSimple()
         // Set trace properties (name, color, point shape to disc)
         trace.setName(traceName)
@@ -475,7 +508,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         const val AVERAGED_DIPOLE_BUTTON_TEXT = "Show Averaged Dipoles"
         const val CURVE_BUTTON_TEXT = "Show M-H Curve"
         const val DIPOLE_BUTTON_TEXT = "Show Dipole"
-        private const val RUN_SIMULATION = "run_simulation"
+        internal const val RUN_SIMULATION = "run_simulation"
         val LATTICE_SIZES = arrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
         val RECORDING_PASS_COUNT = arrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
         val LATTICE_ITEMS = arrayOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "10")

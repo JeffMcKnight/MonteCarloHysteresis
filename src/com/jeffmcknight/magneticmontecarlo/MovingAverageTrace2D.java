@@ -25,7 +25,7 @@ public class MovingAverageTrace2D {
 		setTrace(new Trace2DSimple()); 
 		getTrace().setName(traceName);
 		getTrace().setColor(traceColor);
-		getTrace() .setTracePainter(new TracePainterDisc());
+		getTrace().setTracePainter(new TracePainterDisc());
 	}
 
 	/**

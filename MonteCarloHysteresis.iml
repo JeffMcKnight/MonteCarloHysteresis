@@ -14,6 +14,15 @@
       <src_folder value="file://$MODULE_DIR$/lib" expected_position="2" />
     </src_description>
   </component>
+  <component name="FacetManager">
+    <facet type="kotlin-language" name="Kotlin">
+      <configuration version="5" useProjectSettings="false">
+        <compilerSettings>
+          <option name="additionalArguments" value="-version -opt-in=kotlin.RequiresOptIn" />
+        </compilerSettings>
+      </configuration>
+    </facet>
+  </component>
   <component name="NewModuleRootManager">
     <output url="file://$MODULE_DIR$/bin" />
     <exclude-output />

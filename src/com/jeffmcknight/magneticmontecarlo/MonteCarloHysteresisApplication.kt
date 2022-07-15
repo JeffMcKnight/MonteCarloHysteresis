@@ -3,6 +3,8 @@
  */
 package com.jeffmcknight.magneticmontecarlo
 
+import com.jeffmcknight.magneticmontecarlo.MonteCarloHysteresisPanel.Companion.RUN_SIMULATION
+import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
 import info.monitorenter.gui.chart.io.FileFilterExtensions
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.MainScope
@@ -35,6 +37,8 @@ class MonteCarloHysteresisApplication : JFrame() {
      * TODO: implement addActionListener
      */
     private val mExportMenuItem = JMenuItem(EXPORT_MENU_ITEM_NAME, KeyEvent.VK_E)
+    /** the Run item in the File Menu */
+    private val runMenuItem = JMenuItem(RUN_MENU_ITEM_NAME, KeyEvent.VK_R)
     /** the Save item in the File Menu */
     private val mSaveMenuItem = JMenuItem(SAVE_MENU_ITEM_NAME, KeyEvent.VK_S)
     /**
@@ -84,10 +88,16 @@ class MonteCarloHysteresisApplication : JFrame() {
         println("$OS_NAME_PROPERTY: $operatingSystem")
         return operatingSystem
     }
-    // *************** buildFileMenu() ***************
     /**
+     * TODO: Store the applied field and [MediaGeometry] in the [ViewModel] so we don't have to reach into [mContentPane]
+     * to get them here
      */
     private fun buildFileMenu() {
+        with(runMenuItem) {
+            accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_R, mPrimaryModifierKey)
+            accessibleContext.accessibleDescription = RUN_MENU_ITEM_DESCRIPTION
+            addActionListener { mContentPane.runSimulation(RUN_SIMULATION) }
+        }
         with(mSaveMenuItem) {
             accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_S, mPrimaryModifierKey)
             accessibleContext.accessibleDescription = SAVE_MENU_ITEM_DESCRIPTION
@@ -120,6 +130,7 @@ class MonteCarloHysteresisApplication : JFrame() {
         with(mFileMenu) {
             mnemonic = KeyEvent.VK_F
             accessibleContext.accessibleDescription = "File Menu"
+            add(runMenuItem)
             add(mSaveMenuItem)
             add(mExportMenuItem)
             // Separate the Export menu item from the Quit item
@@ -154,10 +165,12 @@ class MonteCarloHysteresisApplication : JFrame() {
         const val FILE_MENU_NAME = "File"
         const val EXPORT_MENU_ITEM_NAME = "Export"
         const val QUIT_MENU_ITEM_NAME = "Quit"
+        const val RUN_MENU_ITEM_NAME = "Run"
         const val SAVE_MENU_ITEM_NAME = "Save"
         const val MENU_ITEM = "menu item"
         val csvExtension = arrayOf("csv")
         const val EXPORT_MENU_ITEM_DESCRIPTION = EXPORT_MENU_ITEM_NAME + " " + MENU_ITEM
+        const val RUN_MENU_ITEM_DESCRIPTION = RUN_MENU_ITEM_NAME + " " + MENU_ITEM
         const val QUIT_MENU_ITEM_DESCRIPTION = QUIT_MENU_ITEM_NAME + " " + MENU_ITEM
         const val SAVE_MENU_ITEM_DESCRIPTION = SAVE_MENU_ITEM_NAME + " " + MENU_ITEM
 
