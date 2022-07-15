@@ -146,7 +146,6 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
             mUpdateListener?.onDipoleFixated(this[i])
             m += this[i].m
         }
-        println("$TAG\t.recordWithAcBias()\t -- mUpdateListener: $mUpdateListener")
         // TODO: Use this Listener for both MHCurve and individual dipole charts so it will never be null.
         mUpdateListener?.onRecordingDone(this)
         return m / cellCount
@@ -220,10 +219,6 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
             m += this[i].m
         }
         return m / this.size.toFloat()
-    }
-
-    fun toDipoleAccumulator(): DipoleAccumulator {
-        return DipoleAccumulator(this, 1, geometry)
     }
 
     val cellCount: Int

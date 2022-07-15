@@ -3,6 +3,7 @@ package com.jeffmcknight.magneticmontecarlo
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.Companion.create
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.Companion.empty
 import com.jeffmcknight.magneticmontecarlo.model.DipoleAccumulator
+import com.jeffmcknight.magneticmontecarlo.model.DipoleAverages
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -12,34 +13,54 @@ import kotlinx.coroutines.flow.map
 
 class ViewModel(private val coroutineScope: CoroutineScope) {
 
+    var recordCount: Int = 1
+
+    /**
+     * The H field applied during recording
+     * TODO: convert to MutableStateFlow
+     */
+    var appliedField: Float = 0.0f
     private var mediaGeometry = MediaGeometry()
     val recordSingleFlo: MutableSharedFlow<MagneticMedia> = MutableSharedFlow()
 
     /**
-     * Emits the last [MagneticMedia] that was recorded
-     * TODO: I think we'll want this to be a StateFlow once everything is routing through it
+     * Emits a Pair with the last [MagneticMedia] that was recorded, and the H field that was applied during the recording
+     * TODO: make a data class instead of using Pair
      */
-    private val recordingDoneFlo: MutableSharedFlow<MagneticMedia> = MutableSharedFlow()
+    private val recordingDoneFlo: MutableSharedFlow<Pair<MagneticMedia, Float>> = MutableSharedFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val dipoleAccumulatorFlo: Flow<DipoleAccumulator> = recordingDoneFlo
-        .scan(DipoleAccumulator(empty, 0, empty.geometry)) { prev: DipoleAccumulator, next: MagneticMedia ->
-        if (prev.geometry == next.geometry  ) {
-            prev.dipoleList.zip(next) { a: DipoleSphere3f, b: DipoleSphere3f ->
+        .scan(DipoleAccumulator(empty, 0, empty.geometry, 0.0f)) { prev: DipoleAccumulator, next: Pair<MagneticMedia, Float> ->
+        if (prev.geometry == next.first.geometry && prev.fieldB == next.second ) {
+            prev.dipoleList.zip(next.first) { a: DipoleSphere3f, b: DipoleSphere3f ->
                 a.apply { m += b.m }}.let { dipoleList ->
-                DipoleAccumulator(dipoleList, prev.count + 1, prev.geometry) }
+                DipoleAccumulator(dipoleList, prev.count + 1, prev.geometry, appliedField) }
         } else {
-            next.toDipoleAccumulator()
+            DipoleAccumulator(next.first, 1, next.first.geometry, next.second)
         }
     }
 
-    val dipoleAverageFlo: Flow<List<Float>> = dipoleAccumulatorFlo.map{ accum -> accum.dipoleList.map { dipole -> dipole.m / accum.count } }
+    val dipoleAverageFlo: Flow<DipoleAverages> = dipoleAccumulatorFlo.map{ accum ->
+        val floatList = accum.dipoleList.map { dipole -> dipole.m / accum.count }
+        DipoleAverages(floatList, accum.count)
+    }
 
     fun recordSingle(maxAppliedField: Float, geometry: MediaGeometry) {
         coroutineScope.launch {
             val magneticMedia = create(geometry, null)
             magneticMedia.recordWithAcBias(maxAppliedField)
             recordSingleFlo.emit(magneticMedia)
+        }
+    }
+
+    fun recordPoint() {
+        for (i in 1..recordCount) {
+            coroutineScope.launch {
+                val magneticMedia = create(mediaGeometry, null)
+                magneticMedia.recordWithAcBias(appliedField)
+                recordingDoneFlo.emit(Pair(magneticMedia, appliedField))
+            }
         }
     }
 
@@ -55,11 +76,11 @@ class ViewModel(private val coroutineScope: CoroutineScope) {
         mediaGeometry = mediaGeometry.copy(zCount = dimen)
     }
 
-    fun recordPoint(maxAppliedField: Float, geometry: MediaGeometry) {
-        coroutineScope.launch {
-            val magneticMedia = create(geometry, null)
-            magneticMedia.recordWithAcBias(maxAppliedField)
-            recordingDoneFlo.emit(magneticMedia)
-        }
+    fun setDipoleRadius(radius: Float) {
+        mediaGeometry = mediaGeometry.copy(dipoleRadius = radius)
+    }
+
+    fun setPackingFraction(fraction: Float) {
+        mediaGeometry = mediaGeometry.copy(packingFraction = fraction)
     }
 }
