@@ -1,5 +1,6 @@
 package com.jeffmcknight.magneticmontecarlo
 
+import com.jeffmcknight.magneticmontecarlo.model.DipoleAccumulator
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
 import javax.vecmath.Point3f
 
@@ -9,6 +10,11 @@ import javax.vecmath.Point3f
 // **********Container for dipole elements 
 //**********xDim,yDim,zDim indicate dipole count in each direction
 class MagneticMedia : ArrayList<DipoleSphere3f> {
+    val geometry: MediaGeometry
+        get() {
+            return MediaGeometry(xCount, yCount, zCount, packingFraction, dipoleRadius)
+        }
+
     /**  Magnetic Remnanace for SDP assembly */
     var m: Float
     /** Lattice constant, i.e.: spacing between particles on lattice grid */
@@ -43,7 +49,7 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
     }
 
     //**********Constructors**********
-    constructor(x: Int, y: Int, z: Int) : super(x * y * z) {
+    constructor(x: Int = 0, y: Int = 0, z: Int = 0) : super(x * y * z) {
         a = MonteCarloHysteresisPanel.DEFAULT_INDEX_A
         m = 0.0f
         xCount = x
@@ -140,7 +146,6 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
             mUpdateListener?.onDipoleFixated(this[i])
             m += this[i].m
         }
-        println("$TAG\t.recordWithAcBias()\t -- mUpdateListener: $mUpdateListener")
         // TODO: Use this Listener for both MHCurve and individual dipole charts so it will never be null.
         mUpdateListener?.onRecordingDone(this)
         return m / cellCount
@@ -220,6 +225,7 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
         get() = this.size
 
     companion object {
+        val empty = MagneticMedia()
         fun create(geometry: MediaGeometry, listener: MagneticMediaListener?): MagneticMedia {
             return with(geometry) {
                 MagneticMedia(xCount, yCount, zCount, packingFraction, dipoleRadius, listener).also {

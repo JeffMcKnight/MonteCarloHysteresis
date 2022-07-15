@@ -9,6 +9,9 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.MagneticMediaListener;
+import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 //******************** class - CurveFamily ********************
 /**
@@ -81,7 +84,27 @@ public class CurveFamily
 		}
 	}
 
-   //******************** getDefaultRecordPoints() ********************
+	public CurveFamily(
+			int recordCount,
+			@NotNull MediaGeometry geometry,
+			float maxAppliedField,
+			@Nullable MagneticMediaListener mChartUpdateListener,
+			@Nullable CurveFamilyListener mCurveFamilyListener) {
+		this(
+				recordCount,
+				(int)(geometry.getXCount()),
+				geometry.getYCount(),
+				geometry.getZCount(),
+				geometry.getPackingFraction(),
+				geometry.getDipoleRadius(),
+				maxAppliedField,
+				mChartUpdateListener,
+				mCurveFamilyListener
+
+		);
+	}
+
+	//******************** getDefaultRecordPoints() ********************
 	public static int getDefaultRecordPoints() 
 	{
 		return DEFAULT_RECORD_POINTS;

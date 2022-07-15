@@ -1,21 +1,21 @@
 package com.jeffmcknight.magneticmontecarlo
 
 import com.jeffmcknight.magneticmontecarlo.CurveFamily.CurveFamilyListener
-import com.jeffmcknight.magneticmontecarlo.MagneticMedia.Companion.create
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.MagneticMediaListener
+import com.jeffmcknight.magneticmontecarlo.model.DipoleAverages
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
 import info.monitorenter.gui.chart.Chart2D
 import info.monitorenter.gui.chart.ITrace2D
 import info.monitorenter.gui.chart.traces.Trace2DSimple
 import info.monitorenter.gui.chart.traces.painters.TracePainterDisc
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
+import java.awt.event.ItemEvent
 import java.awt.event.KeyEvent
 import java.util.*
 import javax.swing.*
@@ -31,13 +31,59 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     // @return mhCurves
     var mhCurves: CurveFamily? = null
         private set
-    private val mXComboBox = JComboBox(LATTICE_SIZES)
-    private val mYComboBox = JComboBox(LATTICE_SIZES)
-    private val mZComboBox = JComboBox(LATTICE_SIZES)
-    private val dipoleRadiusList = JComboBox(DIPOLE_RADIUS_OPTIONS)
-    private val mPackingFractionBox = JComboBox(PACKING_FRACTION_OPTIONS)
-    private val mRecordCountBox = JComboBox(LATTICE_ITEMS)
-    private val mAppliedFieldRangeBox = JComboBox(H_FIELD_RANGE_ITEMS)
+    private val mXComboBox = JComboBox(LATTICE_SIZES).apply {
+        addItemListener {
+            if (it.isSelected()) {
+                viewModel.setLatticeDimenX(it.item as Int)
+            }
+        }
+    }
+    private val mYComboBox = JComboBox(LATTICE_SIZES).apply {
+        addItemListener {
+            if (it.isSelected()) {
+                viewModel.setLatticeDimenY(it.item as Int)
+            }
+        }
+    }
+    private val mZComboBox = JComboBox(LATTICE_SIZES).apply {
+        addItemListener {
+            if (it.isSelected()) {
+                viewModel.setLatticeDimenZ(it.item as Int)
+            }
+        }
+    }
+    private val dipoleRadiusList = JComboBox(DIPOLE_RADIUS_OPTIONS).apply {
+        addItemListener {
+            if (it.isSelected()) {
+                viewModel.setDipoleRadius(it.item as Float)
+            }
+        }
+    }
+    private val mPackingFractionBox = JComboBox(PACKING_FRACTION_OPTIONS).apply {
+        addItemListener {
+            if (it.isSelected()) {
+                viewModel.setPackingFraction(it.item as Float)
+            }
+        }
+    }
+    private val mRecordCountBox = JComboBox(RECORDING_PASS_COUNT).apply {
+        addItemListener {
+            if (it.isSelected()) {
+                viewModel.recordCount = (it.item as Int)
+            }
+        }
+    }
+
+    /**
+     * The field applied to the [MagneticMedia]
+     */
+    private val mAppliedFieldRangeBox = JComboBox(H_FIELD_RANGE_ITEMS).apply {
+        addItemListener {
+            if (it.isSelected()) {
+                viewModel.appliedField = (it.item as Float)
+            }
+        }
+    }
     private val mRadioButtonGroup = ButtonGroup()
     private val mAveragedDipoleRadioButton = JRadioButton()
     private val mCurveRadioButton = JRadioButton()
@@ -84,10 +130,30 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
 
         //FIXME: is this the right scope/way to collect items emitted by recordingDoneFlo ?
         coroutineScope.launch {
-            viewModel.recordingDoneFlo.collect {
+            viewModel.recordSingleFlo.collect {
                 showDipoleTraces(it)
             }
         }
+        coroutineScope.launch {
+            viewModel.dipoleAverageFlo.collect {
+                showDipoleAverages(it)
+            }
+        }
+    }
+
+    private fun showDipoleAverages(dipoleAverages: DipoleAverages) {
+        mAppliedFieldRangeBox.name = "mAppliedFieldRangeBox"
+        val dipoleAveragesTrace = Trace2DSimple().apply {
+            name = "Averages Dipoles; Ordered by Coercivity.  Recording Passes: ${dipoleAverages.count}"
+            color = Color.GREEN.darker()
+            setTracePainter(TracePainterDisc())
+        }
+        with(bhChart) {
+            removeAllTraces()
+            addTrace(dipoleAveragesTrace)
+            axisX.axisTitle.title = "n [Dipole rank by coercivity]"
+        }
+        dipoleAverages.dipoles.forEachIndexed { index, dipoleH -> dipoleAveragesTrace.addPoint(index.toDouble(), dipoleH.toDouble()) }
     }
 
     /**
@@ -136,8 +202,8 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
      * Build JPanel on left side of JFrame that contains
      * labeled JComboBoxes to set simulation parameters
      */
-    fun buildRunConfigPanel() {
-        val initialComboIndex = 7
+    private fun buildRunConfigPanel() {
+        val initialComboIndex = 8
 
         // Create combo boxes for lattice parameters
         with(mCurveRadioButton) {
@@ -174,7 +240,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         val zComboBoxPanel = buildComboBoxPanel(initialComboIndex, DIMENSIONS_Z_AXIS_LABEL, mZComboBox)
         val dipoleRadiusPanel = buildComboBoxPanel(3, DIPOLE_RADIUS_LABEL, dipoleRadiusList)
         val packingFractionPanel = buildComboBoxPanel(1, PACKING_FRACTION_LABEL, mPackingFractionBox)
-        val recordCountPanel = buildComboBoxPanel(0, RECORDING_PASSES_LABEL, mRecordCountBox)
+        val recordCountPanel = buildComboBoxPanel(8, RECORDING_PASSES_LABEL, mRecordCountBox)
         val mAppliedFieldRangePanel = buildComboBoxPanel(DEFAULT_APPLIED_FIELD_ITEM, APPLIED_FIELD_RANGE_LABEL, mAppliedFieldRangeBox)
         val mRadioButtonPanel = buildButtonPanel(mRadioButtonGroup)
 
@@ -275,13 +341,11 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     }
 
     private fun chartDescription(fastAveragePeriod: Int): String {
-        val string: String
-        string = when (fastAveragePeriod) {
+        return when (fastAveragePeriod) {
             0 -> "Cumulative Average"
             -1 -> "Total (Normalized to " + SATURATION_M + ")"
             else -> "Moving Average over $fastAveragePeriod dipoles"
         }
-        return string
     }
 
     /**
@@ -326,7 +390,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 .toString()
     }
 
-    protected fun showMhCurveChart() {
+    private fun showMhCurveChart() {
         mActiveChart = ChartType.MH_CURVE
         mAppliedFieldRangeBox.name = APPLIED_FIELD_RANGE_LABEL
         bhChart.axisX.axisTitle.title = "H [nWb]"
@@ -363,57 +427,57 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         return panel
     }
 
+    private fun getMediaGeometry(): MediaGeometry {
+        // Capture input from all combo boxes
+        val xAxisCount: Int = (mXComboBox.selectedItem as Int)
+        println("xAxisCount: $xAxisCount")
+        val yAxisCount: Int = (mYComboBox.selectedItem as Int)
+        println("yAxisCount: $yAxisCount")
+        val zAxisCount: Int = (mZComboBox.selectedItem as Int)
+        println("zAxisCount: $zAxisCount")
+        val dipoleRadius: Float = (dipoleRadiusList.selectedItem as Float)
+        println("dipoleRadius: $dipoleRadius")
+        val packingFraction: Float = (mPackingFractionBox.selectedItem as Float)
+        println("packingFraction: $packingFraction")
+        return MediaGeometry(xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius)
+    }
+
     /**
      * Implements ActionListener callback method
      * @param e
      */
     override fun actionPerformed(e: ActionEvent) {
-        // Capture input from all combo boxes
-        val xAxisCount: Int = (mXComboBox.selectedItem as? Int) ?:
-            throw IllegalArgumentException("mXComboBox should contain Integers")
-        println("xAxisCount: $xAxisCount")
-        val yAxisCount: Int = (mYComboBox.selectedItem as? Int) ?:
-            throw IllegalArgumentException("mYComboBox should contain Integers")
-        println("yAxisCount: $yAxisCount")
-        val zAxisCount: Int = (mZComboBox.selectedItem as? Int) ?:
-            throw IllegalArgumentException("mZComboBox should contain Integers")
-        println("zAxisCount: $zAxisCount")
-        val dipoleRadius: Float = (dipoleRadiusList.selectedItem as? String)?.toFloat() ?: 0F
-        println("dipoleRadius: $dipoleRadius")
-        val packingFraction: Float = (mPackingFractionBox.selectedItem as? String)?.toFloat() ?: 0F
-        println("packingFraction: $packingFraction")
-        val recordCount: Int = (mRecordCountBox.selectedItem as? String)?.toInt() ?: 0
-        println("recordCount: $recordCount")
-        val maxAppliedField: Float = (mAppliedFieldRangeBox.selectedItem as? String)?.toFloat() ?: 0F
-        println("maxAppliedField: $maxAppliedField")
+        val actionCommand: String = e.actionCommand
+        runSimulation(actionCommand)
+    }
 
+    public fun runSimulation(actionCommand: String) {
+        val recordCount: Int = (mRecordCountBox.selectedItem as Int)
+        println("recordCount: $recordCount")
+        val geometry: MediaGeometry = getMediaGeometry()
+        val maxAppliedField: Float = getAppliedField()
+        println("maxAppliedField: $maxAppliedField")
         // Run simulation if run button is clicked
-        if (e.actionCommand == RUN_SIMULATION) {
-            val geometry = MediaGeometry(xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius)
+        if (actionCommand == RUN_SIMULATION) {
             when (mActiveChart) {
-                ChartType.DIPOLE_AVERAGES -> viewModel.recordSingle(maxAppliedField, geometry)
+                ChartType.DIPOLE_AVERAGES -> viewModel.recordMultiple()
                 ChartType.MH_CURVE -> {
                     mhCurves = CurveFamily(
                             recordCount,
-                            xAxisCount,
-                            yAxisCount,
-                            zAxisCount,
-                            packingFraction,
-                            dipoleRadius,
+                            geometry,
                             maxAppliedField,
                             mChartUpdateListener,
                             mCurveFamilyListener)
                     mhCurves!!.recordMHCurves()
                 }
-                ChartType.MH_CURVE_POINT -> {
-                    mMagneticMedia = create(geometry, mDipoleUpdateListener)
-                    mMagneticMedia!!.recordWithAcBias(maxAppliedField)
-                }
+                ChartType.MH_CURVE_POINT -> viewModel.recordSingle()
             }
         }
-    } // END ******************** actionPerformed() ********************
+    }
 
-    fun showChart(panel: JPanel) {
+    private fun getAppliedField() = (mAppliedFieldRangeBox.selectedItem as Float)
+
+    private fun showChart(panel: JPanel) {
         // Set chart axis titles
         bhChart.axisX.axisTitle.title = "H [nWb]"
         bhChart.axisY.axisTitle.title = "B"
@@ -434,14 +498,14 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
      * @param chartCurves
      * @param trace
      */
-    fun addMhPoints(chartCurves: CurveFamily, trace: ITrace2D?) {
+    private fun addMhPoints(chartCurves: CurveFamily, trace: ITrace2D?) {
         // Increment the count and update the color
         // to display multiple traces on the same chart.
-        var trace = trace
         mCurveTraceCount = mCurveTraceCount + 1
         traceColor = Color.getHSBColor(traceHue, 1f, 0.85f)
         traceHue = traceHue + 0.22f
         val traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, mhCurves!!.magneticCube)
+        var trace = trace
         trace = Trace2DSimple()
         // Set trace properties (name, color, point shape to disc)
         trace.setName(traceName)
@@ -458,7 +522,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         private val TAG = MonteCarloHysteresisPanel::class.java.simpleName
         private const val serialVersionUID = 5824180412325621552L
         const val DEFAULT_BORDER_SPACE = 30
-        const val DEFAULT_APPLIED_FIELD_ITEM = 0
+        const val DEFAULT_APPLIED_FIELD_ITEM = 1
         const val SATURATION_M = 100.0f
         const val DEFAULT_INDEX_A = 1.0f
         const val MOVING_AVERAGE_WINDOW = 0.1
@@ -475,14 +539,21 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         const val AVERAGED_DIPOLE_BUTTON_TEXT = "Show Averaged Dipoles"
         const val CURVE_BUTTON_TEXT = "Show M-H Curve"
         const val DIPOLE_BUTTON_TEXT = "Show Dipole"
-        private const val RUN_SIMULATION = "run_simulation"
+        internal const val RUN_SIMULATION = "run_simulation"
         val LATTICE_SIZES = arrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
-        val RECORDING_PASS_COUNT = arrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
-        val LATTICE_ITEMS = arrayOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "10")
-        val PACKING_FRACTION_OPTIONS = arrayOf("1.0", "0.9", "0.8", "0.7", "0.6", "0.5", "0.4", "0.3", "0.2", "0.1")
-        val DIPOLE_RADIUS_OPTIONS = arrayOf("0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "2.0")
-        val H_FIELD_RANGE_ITEMS = arrayOf("10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "110", "120", "130", "140", "150", "160", "170", "180", "190", "200")
-        var intNumberCurves = 1
+        val RECORDING_PASS_COUNT = arrayOf(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192)
+        val PACKING_FRACTION_OPTIONS = arrayOf(1.0F, 0.9F, 0.8F, 0.7F, 0.6F, 0.5F, 0.4F, 0.3F, 0.2F, 0.1F)
+        val DIPOLE_RADIUS_OPTIONS = arrayOf(0.1F, 0.2F, 0.3F, 0.4F, 0.5F, 0.6F, 0.7F, 0.8F, 0.9F, 1.0F, 1.1F, 1.2F, 1.3F, 1.4F, 1.5F, 1.6F, 1.7F, 1.8F, 1.9F, 2.0F)
+        val H_FIELD_RANGE_ITEMS = arrayOf(0F, 10F, 20F, 30F, 40F, 50F, 60F, 70F, 80F, 90F, 100F, 110F, 120F, 130F, 140F, 150F, 160F, 170F, 180F, 190F, 200F)
         var frame: JFrame? = null
     }
+}
+
+@Suppress("UNCHECKED_CAST")
+private fun <T> Any.castOrThrow(): T {
+    return (this as? T) ?: throw ClassCastException()
+}
+
+private fun ItemEvent.isSelected(): Boolean {
+    return stateChange == ItemEvent.SELECTED
 }
