@@ -3,7 +3,6 @@ package com.jeffmcknight.magneticmontecarlo
 import com.jeffmcknight.magneticmontecarlo.CurveFamily.CurveFamilyListener
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.MagneticMediaListener
 import com.jeffmcknight.magneticmontecarlo.model.DipoleAverages
-import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
 import info.monitorenter.gui.chart.Chart2D
 import info.monitorenter.gui.chart.ITrace2D
 import info.monitorenter.gui.chart.traces.Trace2DSimple
@@ -104,8 +103,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     private val mTrace: ITrace2D? = null
     private var mActiveChart: ChartType
     private var mDipoleUpdateListener: MagneticMediaListener? = null
-    private var mChartUpdateListener: MagneticMediaListener? = null
-    private var mCurveFamilyListener: CurveFamilyListener? = null
+    private val mCurveFamilyListener by lazy { CurveFamilyListener { curveFamily -> addMhPoints(curveFamily, mTrace) } }
     private var mCumulativeAverageTrace: MovingAverageTrace2D? = null
     private var mTwoPointAverageTrace: MovingAverageTrace2D? = null
     private var mScaledWindowTrace: MovingAverageTrace2D? = null
@@ -125,8 +123,6 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         buildRunConfigPanel()
         showChart(mChartPanel)
         implementDipoleChartListener()
-        implementCurveChartListener()
-        implementCurveFamilyListener()
 
         //FIXME: is this the right scope/way to collect items emitted by recordingDoneFlo ?
         coroutineScope.launch {
@@ -172,31 +168,6 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         }
     }
 
-    /**
-     * Redraws MH CurveFamily chart when the CurveFamily object notifies that it has updated itself
-     */
-    private fun implementCurveFamilyListener() {
-        mCurveFamilyListener = CurveFamilyListener { curveFamily -> addMhPoints(curveFamily, mTrace) }
-    }
-
-    /**
-     *
-     */
-    private fun implementCurveChartListener() {
-        mChartUpdateListener = object : MagneticMediaListener {
-            /**
-             * Stub
-             * TODO: do we need this?
-             */
-            override fun onRecordingDone(magneticMedia: MagneticMedia) { }
-
-            /**
-             * Stub
-             * TODO: do we need this?
-             */
-            override fun onDipoleFixated(dipoleSphere3f: DipoleSphere3f) { }
-        }
-    }
     // *************** buildRunConfigPanel() ***************
     /**
      * Build JPanel on left side of JFrame that contains
@@ -395,10 +366,8 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         mAppliedFieldRangeBox.name = APPLIED_FIELD_RANGE_LABEL
         bhChart.axisX.axisTitle.title = "H [nWb]"
         bhChart.removeAllTraces()
-        // Show data points only if we have already run a simulation.
-        if (null != mhCurves) {
-            addMhPoints(mhCurves!!, mTrace)
-        }
+        // Show data points if we have already run a simulation.
+        mhCurves?.let { addMhPoints(it, mTrace) }
     }
 
     // *************** buildButtonPanel() ***************
@@ -427,21 +396,6 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         return panel
     }
 
-    private fun getMediaGeometry(): MediaGeometry {
-        // Capture input from all combo boxes
-        val xAxisCount: Int = (mXComboBox.selectedItem as Int)
-        println("xAxisCount: $xAxisCount")
-        val yAxisCount: Int = (mYComboBox.selectedItem as Int)
-        println("yAxisCount: $yAxisCount")
-        val zAxisCount: Int = (mZComboBox.selectedItem as Int)
-        println("zAxisCount: $zAxisCount")
-        val dipoleRadius: Float = (dipoleRadiusList.selectedItem as Float)
-        println("dipoleRadius: $dipoleRadius")
-        val packingFraction: Float = (mPackingFractionBox.selectedItem as Float)
-        println("packingFraction: $packingFraction")
-        return MediaGeometry(xAxisCount, yAxisCount, zAxisCount, packingFraction, dipoleRadius)
-    }
-
     /**
      * Implements ActionListener callback method
      * @param e
@@ -451,31 +405,18 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         runSimulation(actionCommand)
     }
 
-    public fun runSimulation(actionCommand: String) {
-        val recordCount: Int = (mRecordCountBox.selectedItem as Int)
-        println("recordCount: $recordCount")
-        val geometry: MediaGeometry = getMediaGeometry()
-        val maxAppliedField: Float = getAppliedField()
-        println("maxAppliedField: $maxAppliedField")
-        // Run simulation if run button is clicked
+    /**
+     * Run simulation when run button/menu/hot-key is clicked/selected/typed
+     */
+    fun runSimulation(actionCommand: String) {
         if (actionCommand == RUN_SIMULATION) {
             when (mActiveChart) {
                 ChartType.DIPOLE_AVERAGES -> viewModel.recordMultiple()
-                ChartType.MH_CURVE -> {
-                    mhCurves = CurveFamily(
-                            recordCount,
-                            geometry,
-                            maxAppliedField,
-                            mChartUpdateListener,
-                            mCurveFamilyListener)
-                    mhCurves!!.recordMHCurves()
-                }
+                ChartType.MH_CURVE -> mhCurves = viewModel.recordBhCurve(mCurveFamilyListener)
                 ChartType.MH_CURVE_POINT -> viewModel.recordSingle()
             }
         }
     }
-
-    private fun getAppliedField() = (mAppliedFieldRangeBox.selectedItem as Float)
 
     private fun showChart(panel: JPanel) {
         // Set chart axis titles
@@ -504,7 +445,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         mCurveTraceCount = mCurveTraceCount + 1
         traceColor = Color.getHSBColor(traceHue, 1f, 0.85f)
         traceHue = traceHue + 0.22f
-        val traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, mhCurves!!.magneticCube)
+        val traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, chartCurves.magneticCube)
         var trace = trace
         trace = Trace2DSimple()
         // Set trace properties (name, color, point shape to disc)
@@ -547,11 +488,6 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         val H_FIELD_RANGE_ITEMS = arrayOf(0F, 10F, 20F, 30F, 40F, 50F, 60F, 70F, 80F, 90F, 100F, 110F, 120F, 130F, 140F, 150F, 160F, 170F, 180F, 190F, 200F)
         var frame: JFrame? = null
     }
-}
-
-@Suppress("UNCHECKED_CAST")
-private fun <T> Any.castOrThrow(): T {
-    return (this as? T) ?: throw ClassCastException()
 }
 
 private fun ItemEvent.isSelected(): Boolean {

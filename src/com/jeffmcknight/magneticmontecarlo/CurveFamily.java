@@ -46,7 +46,7 @@ public class CurveFamily
    private float mPackingFraction;
    private float mDipoleRadius;
 	private CurveFamilyListener mCurveFamilyListener;
-	private MagneticMediaListener mMagneticMediaListener;
+	@Nullable private MagneticMediaListener mMagneticMediaListener;
 	
 //	public static final float defaultIndexA  = 1.0f;
 //	float recordedNetMNegative[][] = new float[numberRecordPoints][recordPasses];
@@ -60,8 +60,7 @@ public class CurveFamily
 			float packingFraction, 
 			float dipoleRadius, 
 			float maximumH, 
-			MagneticMediaListener magneticMediaListener, 
-			CurveFamilyListener curveFamilyListener) 
+			CurveFamilyListener curveFamilyListener)
 	{
 		numberRecordPoints   = (int) (2*(DEFAULT_MAXIMUM_H/DEFAULT_RECORD_STEP_SIZE) + 1);
 		curveCount = count;
@@ -71,8 +70,7 @@ public class CurveFamily
 		mPackingFraction = packingFraction;
 		mDipoleRadius = dipoleRadius;
 		latticeConst = 2f * dipoleRadius / packingFraction ;
-		mMagneticMediaListener = magneticMediaListener;
-		mCurveFamilyListener = curveFamilyListener; 
+		mCurveFamilyListener = curveFamilyListener;
 		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, packingFraction, dipoleRadius, mMagneticMediaListener);
 		averageMCurve = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		minMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
@@ -88,17 +86,15 @@ public class CurveFamily
 			int recordCount,
 			@NotNull MediaGeometry geometry,
 			float maxAppliedField,
-			@Nullable MagneticMediaListener mChartUpdateListener,
 			@Nullable CurveFamilyListener mCurveFamilyListener) {
 		this(
 				recordCount,
-				(int)(geometry.getXCount()),
+				geometry.getXCount(),
 				geometry.getYCount(),
 				geometry.getZCount(),
 				geometry.getPackingFraction(),
 				geometry.getDipoleRadius(),
 				maxAppliedField,
-				mChartUpdateListener,
 				mCurveFamilyListener
 
 		);
