@@ -83,4 +83,13 @@ class ViewModel(private val coroutineScope: CoroutineScope) {
     fun setPackingFraction(fraction: Float) {
         mediaGeometry = mediaGeometry.copy(packingFraction = fraction)
     }
+
+    /**
+     * Record a set of B-H points for a specific [MediaGeometry] to show the linear and/or saturation regions of the
+     * recording.
+     * TODO: Flow-ify
+     */
+    fun recordBhCurve(curveFamilyListener: CurveFamily.CurveFamilyListener): CurveFamily {
+        return CurveFamily(recordCount, mediaGeometry, appliedField, curveFamilyListener).apply { recordMHCurves() }
+    }
 }
