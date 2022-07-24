@@ -1,6 +1,5 @@
 package com.jeffmcknight.magneticmontecarlo
 
-import com.jeffmcknight.magneticmontecarlo.CurveFamily.CurveFamilyListener
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.MagneticMediaListener
 import com.jeffmcknight.magneticmontecarlo.model.DipoleAverages
 import info.monitorenter.gui.chart.Chart2D
@@ -26,10 +25,12 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
 
     private var mMagneticMedia: MagneticMedia? = null
 
-    // ******************** getmhCurves() ********************
-    // @return mhCurves
-    var mhCurves: CurveFamily? = null
-        private set
+    /**
+     * A B-H curve trace with data from a set of recorded [MagneticMedia]
+     */
+    val curveFamily
+        get() = viewModel.curveFamilyFlo.value
+
     private val mXComboBox = JComboBox(LATTICE_SIZES).apply {
         addItemListener {
             if (it.isSelected()) {
@@ -100,10 +101,8 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     private val mControlsPanel: JPanel
     private var traceColor = Color(255, 0, 0)
     private var traceHue = 0f
-    private val mTrace: ITrace2D? = null
     private var mActiveChart: ChartType
     private var mDipoleUpdateListener: MagneticMediaListener? = null
-    private val mCurveFamilyListener by lazy { CurveFamilyListener { curveFamily -> addMhPoints(curveFamily, mTrace) } }
     private var mCumulativeAverageTrace: MovingAverageTrace2D? = null
     private var mTwoPointAverageTrace: MovingAverageTrace2D? = null
     private var mScaledWindowTrace: MovingAverageTrace2D? = null
@@ -133,6 +132,11 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         coroutineScope.launch {
             viewModel.dipoleAverageFlo.collect {
                 showDipoleAverages(it)
+            }
+        }
+        coroutineScope.launch {
+            viewModel.curveFamilyFlo.collect {
+                addMhPoints(it)
             }
         }
     }
@@ -361,13 +365,15 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 .toString()
     }
 
+    /**
+     * Show [CurveFamily] data points if we have already run a simulation.
+     */
     private fun showMhCurveChart() {
         mActiveChart = ChartType.MH_CURVE
         mAppliedFieldRangeBox.name = APPLIED_FIELD_RANGE_LABEL
         bhChart.axisX.axisTitle.title = "H [nWb]"
         bhChart.removeAllTraces()
-        // Show data points if we have already run a simulation.
-        mhCurves?.let { addMhPoints(it, mTrace) }
+        addMhPoints(viewModel.curveFamilyFlo.value)
     }
 
     // *************** buildButtonPanel() ***************
@@ -412,7 +418,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         if (actionCommand == RUN_SIMULATION) {
             when (mActiveChart) {
                 ChartType.DIPOLE_AVERAGES -> viewModel.recordMultiple()
-                ChartType.MH_CURVE -> mhCurves = viewModel.recordBhCurve(mCurveFamilyListener)
+                ChartType.MH_CURVE -> viewModel.recordBhCurve()
                 ChartType.MH_CURVE_POINT -> viewModel.recordSingle()
             }
         }
@@ -434,24 +440,25 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         panel.setLocation(0, 0)
         panel.isVisible = true
     }
-    // *************** addAllPoints() ***************
+
     /**
-     * @param chartCurves
-     * @param trace
+     * Create a new [Trace2DSimple] and use it to add points from [chartCurves] to the chart.
+     * TODO: find a better way to update the trace color (maybe a list of colors or something?)
+     * @param chartCurves a set of B-H points that define a linear-ish recording.
      */
-    private fun addMhPoints(chartCurves: CurveFamily, trace: ITrace2D?) {
+    private fun addMhPoints(chartCurves: CurveFamily) {
         // Increment the count and update the color
         // to display multiple traces on the same chart.
-        mCurveTraceCount = mCurveTraceCount + 1
+        mCurveTraceCount += 1
         traceColor = Color.getHSBColor(traceHue, 1f, 0.85f)
-        traceHue = traceHue + 0.22f
+        traceHue += 0.22f
         val traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, chartCurves.magneticCube)
-        var trace = trace
-        trace = Trace2DSimple()
-        // Set trace properties (name, color, point shape to disc)
-        trace.setName(traceName)
-        trace.setColor(traceColor)
-        trace.setTracePainter(TracePainterDisc())
+        val trace = Trace2DSimple().apply {
+            // Set trace properties (name, color, point shape to disc)
+            setName(traceName)
+            setColor(traceColor)
+            setTracePainter(TracePainterDisc())
+        }
         // Add the trace to the chart. This has to be done before adding points (deadlock prevention):
         bhChart.addTrace(trace)
         for (i in 0 until chartCurves.getAverageMCurve().length) {
