@@ -19,12 +19,6 @@ public class CurveFamily
 {
    public static final String TAG = CurveFamily.class.getSimpleName();
    public static final int DEFAULT_RECORD_POINTS = 15;
-	public static final int DEFAULT_RECORD_STEP_SIZE = 2;
-	public static final float DEFAULT_DIPOLE_RADIUS = 0.5f;
-	public static final float DEFAULT_LATTICE_CONSTANT = 1.0f;
-	public static final float DEFAULT_PACKING_FRACTION = 1.0f;
-	public static final float SATURATION_M = 100.0f;
-	public static final float DEFAULT_MAXIMUM_H = 75.0f;
 	public static final float DEFAULT_MINIMUM_H = 0;
 
 	private final int   curveCount;
@@ -49,8 +43,7 @@ public class CurveFamily
 			int zDim, 
 			float packingFraction, 
 			float dipoleRadius, 
-			float maximumH)
-	{
+			float maximumH) {
 		curveCount = count;
 		mCubeEdgeX       = xDim;
 		mCubeEdgeY       = yDim;
@@ -60,8 +53,7 @@ public class CurveFamily
 		minMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		maxMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		mhCurveSet = new  HysteresisCurve[curveCount];
-		for (int i = 0; i < mhCurveSet.length; i++) 
-		{
+		for (int i = 0; i < mhCurveSet.length; i++) {
 			mhCurveSet[i] = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		}
 	}
@@ -96,7 +88,6 @@ public class CurveFamily
 		return averageMCurve;
 	}
 
-
    public MagneticMedia getMagneticCube() {
 	return magneticCube;
 }
@@ -117,14 +108,11 @@ public class CurveFamily
 		}
 
 		//******************** generateMaxMCurve() ********************
-		private void generateMaxMCurve() 
-		{
-			for (int i = 0; i < mhCurveSet[0].getLength(); i++) 
-			{
+		private void generateMaxMCurve() {
+			for (int i = 0; i < mhCurveSet[0].getLength(); i++) {
 				float tempM = mhCurveSet[0].getDipole(i).getM();
-				for (int j = 0; j < mhCurveSet.length; j++) 
-				{
-					tempM = (tempM > mhCurveSet[j].getDipole(i).getM()) ? tempM : mhCurveSet[j].getDipole(i).getM(); 
+				for (int j = 0; j < mhCurveSet.length; j++) {
+					tempM = Math.max(tempM, mhCurveSet[j].getDipole(i).getM());
 				}
 				maxMCurve.getDipole(i).setM(tempM);	
 			}
@@ -133,12 +121,10 @@ public class CurveFamily
 		//******************** generateMinMCurve() ********************
 		private void generateMinMCurve() 
 		{
-			for (int i = 0; i < mhCurveSet[0].getLength(); i++) 
-			{
+			for (int i = 0; i < mhCurveSet[0].getLength(); i++) {
 				float tempM = mhCurveSet[0].getDipole(i).getM();
-				for (int j = 0; j < mhCurveSet.length; j++) 
-				{
-					tempM = (tempM < mhCurveSet[j].getDipole(i).getM()) ? tempM : mhCurveSet[j].getDipole(i).getM(); 
+				for (int j = 0; j < mhCurveSet.length; j++) {
+					tempM = Math.min(tempM, mhCurveSet[j].getDipole(i).getM());
 				}
 				minMCurve.getDipole(i).setM(tempM);	
 			}
@@ -148,14 +134,11 @@ public class CurveFamily
 		/**
 		 * 
 		 */
-		private void generateAverageMCurve() 
-		{
+		private void generateAverageMCurve() {
 			// iterate over each record point
-			for (int i = 0; i < mhCurveSet[0].getLength(); i++) 
-			{
+			for (int i = 0; i < mhCurveSet[0].getLength(); i++) {
 				float tempM = 0;
-				for (int j = 0; j < mhCurveSet.length; j++) 
-				{
+				for (int j = 0; j < mhCurveSet.length; j++) {
 					tempM = tempM + mhCurveSet[j].getDipole(i).getM(); 
 				}
 				averageMCurve.getDipole(i).setM(tempM/mhCurveSet.length);	
@@ -163,8 +146,7 @@ public class CurveFamily
 		}
 
 //******************** writeCurveToFile() ********************
-public void writeCurvesToFile(File destinationDirectory, File destinationFile) 
-{
+public void writeCurvesToFile(File destinationDirectory, File destinationFile) {
    String fullFileName;
 //		float appliedH;
 //		String userDirectory;

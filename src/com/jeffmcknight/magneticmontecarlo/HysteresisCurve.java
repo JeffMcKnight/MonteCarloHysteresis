@@ -10,7 +10,7 @@ package com.jeffmcknight.magneticmontecarlo;
  */
 public class HysteresisCurve 
 {
-	RecordPoint[] mRecordPoint;
+	RecordPoint[] mRecordPoints;
 
 	//******************** HysteresisCurve() -- Constructor ********************
 	/**
@@ -21,36 +21,36 @@ public class HysteresisCurve
 	 */
 	public HysteresisCurve(float hMin, float hMax, float stepSize) {
 		int pointCount = (int)((hMax-hMin)/stepSize);
-		mRecordPoint = new RecordPoint[pointCount + 1] ;
-		for (int i = 0; i < mRecordPoint.length; i++) 
+		mRecordPoints = new RecordPoint[pointCount + 1] ;
+		for (int i = 0; i < mRecordPoints.length; i++)
 		{
 			float appliedH = (stepSize*i)  + hMin;
-			mRecordPoint[i] = new RecordPoint(appliedH);
+			mRecordPoints[i] = new RecordPoint(appliedH);
 		}
 	}
 	
 	//******************** getDipoleSet() ********************
-	public RecordPoint[] getDipoleSet() 
+	public RecordPoint[] getRecordPoints()
 	{
-		return mRecordPoint;
+		return mRecordPoints;
 	}
 
 	//******************** getDipole() ********************
 	public RecordPoint getDipole(int i) 
 	{
-		return mRecordPoint[i];
+		return mRecordPoints[i];
 	}
 
 	//******************** getH() ********************
 	public float getH(int i) 
 	{
-		return mRecordPoint[i].getH();
+		return mRecordPoints[i].getH();
 	}	
 
 	//******************** getLength() ********************
 	public int getLength() 
 	{
-		return mRecordPoint.length;
+		return mRecordPoints.length;
 	}
 
 //	//******************** getM() ********************
@@ -62,9 +62,9 @@ public class HysteresisCurve
 	//******************** HysteresisCurve() ********************
 	public void generateCurve(MagneticMedia magneticMedia) 
 	{
-		for (int i = 0; i < mRecordPoint.length; i++) 
+		for (int i = 0; i < mRecordPoints.length; i++)
 		{
-			mRecordPoint[i].setM( magneticMedia.recordWithAcBias(mRecordPoint[i].getH()) );	
+			mRecordPoints[i].setM( magneticMedia.recordWithAcBias(mRecordPoints[i].getH()) );
 			System.out.print("."); // show progress
 		}
 	} 	// END ******************** HysteresisCurve() ********************
