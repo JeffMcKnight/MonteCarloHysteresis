@@ -455,15 +455,14 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         val traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, chartCurves.magneticCube)
         val trace = Trace2DSimple().apply {
             // Set trace properties (name, color, point shape to disc)
-            setName(traceName)
-            setColor(traceColor)
+            name = traceName
+            color = traceColor
             setTracePainter(TracePainterDisc())
         }
         // Add the trace to the chart. This has to be done before adding points (deadlock prevention):
         bhChart.addTrace(trace)
-        for (i in 0 until chartCurves.getAverageMCurve().length) {
-            trace.addPoint(chartCurves.getAverageMCurve().getDipole(i).getH().toDouble(), chartCurves.getAverageMCurve().getDipole(i).getM().toDouble())
-        }
+        // Add the recording points to the trace
+        chartCurves.getAverageMCurve().recordPoints.forEach { trace.addPoint(it.getH().toDouble(), it.getM().toDouble()) }
     }
 
     companion object {

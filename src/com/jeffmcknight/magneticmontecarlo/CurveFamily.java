@@ -8,12 +8,9 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
-import com.jeffmcknight.magneticmontecarlo.MagneticMedia.MagneticMediaListener;
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-//******************** class - CurveFamily ********************
 /**
  * @author JeffMckKight
  *
@@ -22,30 +19,18 @@ public class CurveFamily
 {
    public static final String TAG = CurveFamily.class.getSimpleName();
    public static final int DEFAULT_RECORD_POINTS = 15;
-	public static final int DEFAULT_RECORD_STEP_SIZE = 2;
-	public static final float DEFAULT_DIPOLE_RADIUS = 0.5f;
-	public static final float DEFAULT_LATTICE_CONSTANT = 1.0f;
-	public static final float DEFAULT_PACKING_FRACTION = 1.0f;
-	public static final float SATURATION_M = 100.0f;
-	public static final float DEFAULT_MAXIMUM_H = 75.0f;
 	public static final float DEFAULT_MINIMUM_H = 0;
 
-	private int   curveCount;
-	private int   numberRecordPoints;
-	private int   mCubeEdgeX;
-	private int   mCubeEdgeY;
-	private int   mCubeEdgeZ;
-//	private float defaultDipoleRadius = 0.000001f;
-	private float latticeConst = DEFAULT_LATTICE_CONSTANT;
-	
-	private MagneticMedia magneticCube;
+	private final int   curveCount;
+	private final int   mCubeEdgeX;
+	private final int   mCubeEdgeY;
+	private final int   mCubeEdgeZ;
+
+	private final MagneticMedia magneticCube;
 	HysteresisCurve[] mhCurveSet;
 	HysteresisCurve averageMCurve;
 	HysteresisCurve minMCurve;
 	HysteresisCurve maxMCurve;
-   private float mPackingFraction;
-   private float mDipoleRadius;
-	@Nullable private MagneticMediaListener mMagneticMediaListener;
 
 //	public static final float defaultIndexA  = 1.0f;
 //	float recordedNetMNegative[][] = new float[numberRecordPoints][recordPasses];
@@ -58,23 +43,17 @@ public class CurveFamily
 			int zDim, 
 			float packingFraction, 
 			float dipoleRadius, 
-			float maximumH)
-	{
-		numberRecordPoints   = (int) (2*(DEFAULT_MAXIMUM_H/DEFAULT_RECORD_STEP_SIZE) + 1);
+			float maximumH) {
 		curveCount = count;
 		mCubeEdgeX       = xDim;
 		mCubeEdgeY       = yDim;
 		mCubeEdgeZ       = zDim;
-		mPackingFraction = packingFraction;
-		mDipoleRadius = dipoleRadius;
-		latticeConst = 2f * dipoleRadius / packingFraction ;
-		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, packingFraction, dipoleRadius, mMagneticMediaListener);
+		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, packingFraction, dipoleRadius, null);
 		averageMCurve = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		minMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		maxMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		mhCurveSet = new  HysteresisCurve[curveCount];
-		for (int i = 0; i < mhCurveSet.length; i++) 
-		{
+		for (int i = 0; i < mhCurveSet.length; i++) {
 			mhCurveSet[i] = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		}
 	}
@@ -109,121 +88,10 @@ public class CurveFamily
 		return averageMCurve;
 	}
 
-	// ******************** getcubeEdgeX() ********************
-   // @return mCubeEdgeX
-   int getCubeEdgeX()
-   {
-      return mCubeEdgeX;
-   }
-
-   // ******************** getCubeEdgeY() ********************
-   // @return mCubeEdgeY
-   int getCubeEdgeY()
-   {
-      return mCubeEdgeY;
-   }
-
-   // ******************** getCubeEdgeZ() ********************
-   // @return cubeEdgeZ
-   int getCubeEdgeZ()
-   {
-      return mCubeEdgeZ;
-   }
-
-   // ******************** getDipoleRadius() ********************
-   // @return mDipoleRadius
-   float getDipoleRadius()
-   {
-      return mDipoleRadius;
-   }
-
-   // ******************** getlatticeConst() ********************
-   // @return latticeConst
-   float getLatticeConst()
-   {
-      return latticeConst;
-   }
-
    public MagneticMedia getMagneticCube() {
 	return magneticCube;
 }
 
-public void setMagneticCube(MagneticMedia magneticCube) {
-	this.magneticCube = magneticCube;
-}
-
-/**
-	 * @return the minMCurve
-	 */
-	protected HysteresisCurve getMinMCurve()
-	{
-		return minMCurve;
-	}
-
-	/**
-	 * @return the maxMCurve
-	 */
-	protected HysteresisCurve getMaxMCurve()
-	{
-		return maxMCurve;
-	}
-
-	/**
-	 * @return the mhCurveSet
-	 */
-	HysteresisCurve[] getMhCurveSet()
-	{
-		return mhCurveSet;
-	}
-
-   // ******************** getmPackingFraction() ********************
-   // @return mPackingFraction
-   float getPackingFraction()
-   {
-      return mPackingFraction;
-   }
-
-	//******************** getRecordPasses() ********************
-	public int getRecordPasses() 
-	{
-		return curveCount;
-	}
-
-	//******************** setRecordPasses() ********************
-	public void setRecordPasses(int recordPasses) 
-	{
-		this.curveCount = recordPasses;
-	}
-
-	//******************** setCubeEdge() ********************
-	public void setCubeEdgeX(int cubeDim) 
-	{
-		this.mCubeEdgeX = cubeDim;
-	}
-
-	//******************** setCubeEdge() ********************
-	public void setCubeEdgeY(int cubeDim) 
-	{
-		this.mCubeEdgeY = cubeDim;
-	}
-
-	//******************** setCubeEdge() ********************
-	public void setCubeEdgeZ(int cubeDim) 
-	{
-		this.mCubeEdgeZ = cubeDim;
-	}
-
-	//******************** getNumberRecordPoints() ********************
-	public int getNumberRecordPoints() 
-	{
-		return numberRecordPoints;
-	}
-
-	//******************** setNumberRecordPoints() ********************
-	public void setNumberRecordPoints(int intNumPoints) 
-	{
-		numberRecordPoints = intNumPoints;
-	}
 
 		//******************** recordMHCurves ********************
 		public void recordMHCurves() 
@@ -240,14 +108,11 @@ public void setMagneticCube(MagneticMedia magneticCube) {
 		}
 
 		//******************** generateMaxMCurve() ********************
-		private void generateMaxMCurve() 
-		{
-			for (int i = 0; i < mhCurveSet[0].getLength(); i++) 
-			{
+		private void generateMaxMCurve() {
+			for (int i = 0; i < mhCurveSet[0].getLength(); i++) {
 				float tempM = mhCurveSet[0].getDipole(i).getM();
-				for (int j = 0; j < mhCurveSet.length; j++) 
-				{
-					tempM = (tempM > mhCurveSet[j].getDipole(i).getM()) ? tempM : mhCurveSet[j].getDipole(i).getM(); 
+				for (int j = 0; j < mhCurveSet.length; j++) {
+					tempM = Math.max(tempM, mhCurveSet[j].getDipole(i).getM());
 				}
 				maxMCurve.getDipole(i).setM(tempM);	
 			}
@@ -256,12 +121,10 @@ public void setMagneticCube(MagneticMedia magneticCube) {
 		//******************** generateMinMCurve() ********************
 		private void generateMinMCurve() 
 		{
-			for (int i = 0; i < mhCurveSet[0].getLength(); i++) 
-			{
+			for (int i = 0; i < mhCurveSet[0].getLength(); i++) {
 				float tempM = mhCurveSet[0].getDipole(i).getM();
-				for (int j = 0; j < mhCurveSet.length; j++) 
-				{
-					tempM = (tempM < mhCurveSet[j].getDipole(i).getM()) ? tempM : mhCurveSet[j].getDipole(i).getM(); 
+				for (int j = 0; j < mhCurveSet.length; j++) {
+					tempM = Math.min(tempM, mhCurveSet[j].getDipole(i).getM());
 				}
 				minMCurve.getDipole(i).setM(tempM);	
 			}
@@ -271,14 +134,11 @@ public void setMagneticCube(MagneticMedia magneticCube) {
 		/**
 		 * 
 		 */
-		private void generateAverageMCurve() 
-		{
+		private void generateAverageMCurve() {
 			// iterate over each record point
-			for (int i = 0; i < mhCurveSet[0].getLength(); i++) 
-			{
+			for (int i = 0; i < mhCurveSet[0].getLength(); i++) {
 				float tempM = 0;
-				for (int j = 0; j < mhCurveSet.length; j++) 
-				{
+				for (int j = 0; j < mhCurveSet.length; j++) {
 					tempM = tempM + mhCurveSet[j].getDipole(i).getM(); 
 				}
 				averageMCurve.getDipole(i).setM(tempM/mhCurveSet.length);	
@@ -286,8 +146,7 @@ public void setMagneticCube(MagneticMedia magneticCube) {
 		}
 
 //******************** writeCurveToFile() ********************
-public void writeCurvesToFile(File destinationDirectory, File destinationFile) 
-{
+public void writeCurvesToFile(File destinationDirectory, File destinationFile) {
    String fullFileName;
 //		float appliedH;
 //		String userDirectory;
@@ -450,15 +309,5 @@ private void writeParametersToFile()
 	WriteToFile.appendNewLine();
 }
 
-//******************** updatePackingFraction ********************
-public void updatePackingFraction(float packingFraction) 
-{
-		magneticCube.setPackingFraction(packingFraction);
 }
-
-public interface CurveFamilyListener{
-	void notifyCurvesDone(CurveFamily curveFamily);
-}
-
-} //END ******************** class - CurveFamily ********************
 
