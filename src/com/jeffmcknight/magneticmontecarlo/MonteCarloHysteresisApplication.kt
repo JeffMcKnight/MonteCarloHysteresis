@@ -5,6 +5,7 @@ package com.jeffmcknight.magneticmontecarlo
 
 import com.jeffmcknight.magneticmontecarlo.MonteCarloHysteresisPanel.Companion.RUN_SIMULATION
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
+import com.jeffmcknight.magneticmontecarlo.model.Repository
 import info.monitorenter.gui.chart.io.FileFilterExtensions
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.MainScope
@@ -27,7 +28,8 @@ import kotlin.system.exitProcess
 class MonteCarloHysteresisApplication : JFrame() {
 
     private val coroutineScope = GlobalScope
-    private val viewModel: ViewModel by lazy { ViewModel(coroutineScope) }
+    private val repo by lazy { Repository(coroutineScope) }
+    private val viewModel: ViewModel by lazy { ViewModel(coroutineScope, repo) }
     private val mPrimaryModifierKey: Int
     private val mOperatingSystem: OperatingSystem
     /** the File Menu */

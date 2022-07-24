@@ -1,10 +1,8 @@
 package com.jeffmcknight.magneticmontecarlo
 
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.MagneticMediaListener
-import com.jeffmcknight.magneticmontecarlo.model.DipoleAverages
 import com.jeffmcknight.magneticmontecarlo.model.Hfield
 import info.monitorenter.gui.chart.Chart2D
-import info.monitorenter.gui.chart.ITrace2D
 import info.monitorenter.gui.chart.traces.Trace2DSimple
 import info.monitorenter.gui.chart.traces.painters.TracePainterDisc
 import kotlinx.coroutines.CoroutineScope
@@ -125,14 +123,31 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         implementDipoleChartListener()
 
         //FIXME: is this the right scope/way to collect items emitted by recordingDoneFlo ?
+        // FIXME: make a sealed class and do this routing in the ViewModel
         coroutineScope.launch {
             viewModel.recordSingleFlo.collect {
-                showDipoleTraces(it)
+                when (mActiveChart) {
+                    ChartType.MH_CURVE_POINT -> {
+                        bhChart.removeAllTraces()
+                        showDipoleTraces(it)
+                    }
+                    ChartType.DIPOLE_AVERAGES, ChartType.MH_CURVE -> {}
+                }
             }
         }
         coroutineScope.launch {
             viewModel.dipoleAverageFlo.collect {
-                showDipoleAverages(it)
+                when (mActiveChart) {
+                    ChartType.DIPOLE_AVERAGES -> {
+                        bhChart.removeAllTraces()
+                        val traceName = "Averages Dipoles; Ordered by Coercivity.  Recording Passes: ${it.count}"
+                        val traceColor = Color.GREEN.darker()
+                        val pointList = it.dipoles.mapIndexed { index: Int, h: Float -> Point2d(index.toDouble(), h.toDouble()) }
+                        val titleXAxis = "n [Dipole rank by coercivity]"
+                        showAsTrace(TraceSpec(traceName, titleXAxis, traceColor, pointList))
+                    }
+                    ChartType.MH_CURVE_POINT, ChartType.MH_CURVE -> {}
+                }
             }
         }
         coroutineScope.launch {
@@ -145,21 +160,6 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 dipoleTraces.forEach { showAsTrace(it) }
             }
         }
-    }
-
-    private fun showDipoleAverages(dipoleAverages: DipoleAverages) {
-        mAppliedFieldRangeBox.name = "mAppliedFieldRangeBox"
-        val dipoleAveragesTrace = Trace2DSimple().apply {
-            name = "Averages Dipoles; Ordered by Coercivity.  Recording Passes: ${dipoleAverages.count}"
-            color = Color.GREEN.darker()
-            setTracePainter(TracePainterDisc())
-        }
-        with(bhChart) {
-            removeAllTraces()
-            addTrace(dipoleAveragesTrace)
-            axisX.axisTitle.title = "n [Dipole rank by coercivity]"
-        }
-        dipoleAverages.dipoles.forEachIndexed { index, dipoleH -> dipoleAveragesTrace.addPoint(index.toDouble(), dipoleH.toDouble()) }
     }
 
     /**
@@ -302,25 +302,6 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         }
     }
 
-    /**
-     * @param fastAveragePeriod
-     * @param magneticCube TODO
-     * @return
-     */
-    private fun buildTrace(fastAveragePeriod: Int, magneticCube: MagneticMedia, traceColor: Color): ITrace2D {
-        val trace: ITrace2D
-        // Increment the count and update the color
-        // to display multiple traces on the same chart.
-        mDipoleTraceCount = mDipoleTraceCount + 1
-        val traceName = buildTraceName(DIPOLE_CHART_TITLE, mDipoleTraceCount, fastAveragePeriod, magneticCube)
-        trace = Trace2DSimple()
-        // Set trace properties (name, color, point shape to disc)
-        trace.setName(traceName)
-        trace.setColor(traceColor)
-        trace.setTracePainter(TracePainterDisc())
-        return trace
-    }
-
     private fun chartDescription(fastAveragePeriod: Int): String {
         return when (fastAveragePeriod) {
             0 -> "Cumulative Average"
@@ -459,12 +440,13 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         val traceColor = Color.getHSBColor(traceHue, 1f, 0.85f)
         traceHue += 0.22f
         val traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, chartCurves.magneticCube)
+        val titleXAxis = "H, applied [nWb]"
         val pointList = chartCurves.getAverageMCurve().recordPoints.map { Point2d(it.h.toDouble(), it.m.toDouble()) }
-        showAsTrace(TraceSpec(traceName, traceColor, pointList))
+        showAsTrace(TraceSpec(traceName, titleXAxis, traceColor, pointList))
     }
 
     /**
-     * Show the [TraceSpec.pointList] on [bhChart] as a [Trace2DSimple]
+     * Show the [pointList] on [bhChart] as a [Trace2DSimple]
      */
     private fun showAsTrace(traceSpec: TraceSpec) {
         Trace2DSimple()
@@ -476,6 +458,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 // Set trace properties (name, color, point shape to disc)
                 // Add the trace to the chart. This has to be done before adding points (deadlock prevention):
                 bhChart.addTrace(trace)
+                bhChart.axisX.axisTitle.title = traceSpec.titleXAxis
                 // Add the recording points to the trace
                 traceSpec.pointList.forEach { point -> trace.addPoint(point.x, point.y) }
             }
@@ -523,4 +506,4 @@ private fun ItemEvent.isSelected(): Boolean {
  * @param the color of he points to display on the chart
  * @param pointList the points to display on the chart
  */
-data class TraceSpec(val name: String, val color: Color, val pointList: List<Point2d>)
+data class TraceSpec(val name: String, val titleXAxis: String, val color: Color, val pointList: List<Point2d>)
