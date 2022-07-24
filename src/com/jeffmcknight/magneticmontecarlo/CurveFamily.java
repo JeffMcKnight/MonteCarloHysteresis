@@ -18,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
  * @author JeffMckKight
  *
  */
-public class CurveFamily 
+public class CurveFamily
 {
    public static final String TAG = CurveFamily.class.getSimpleName();
    public static final int DEFAULT_RECORD_POINTS = 15;
@@ -45,22 +45,20 @@ public class CurveFamily
 	HysteresisCurve maxMCurve;
    private float mPackingFraction;
    private float mDipoleRadius;
-	private CurveFamilyListener mCurveFamilyListener;
 	@Nullable private MagneticMediaListener mMagneticMediaListener;
-	
+
 //	public static final float defaultIndexA  = 1.0f;
 //	float recordedNetMNegative[][] = new float[numberRecordPoints][recordPasses];
 //	float recordedNetMPositive[][] = new float[numberRecordPoints][recordPasses];
 
 	//********** constructor - CurveFamily **********
-	public CurveFamily(int count, 
+	public CurveFamily(int count,
 			int xDim, 
 			int yDim, 
 			int zDim, 
 			float packingFraction, 
 			float dipoleRadius, 
-			float maximumH, 
-			CurveFamilyListener curveFamilyListener)
+			float maximumH)
 	{
 		numberRecordPoints   = (int) (2*(DEFAULT_MAXIMUM_H/DEFAULT_RECORD_STEP_SIZE) + 1);
 		curveCount = count;
@@ -70,7 +68,6 @@ public class CurveFamily
 		mPackingFraction = packingFraction;
 		mDipoleRadius = dipoleRadius;
 		latticeConst = 2f * dipoleRadius / packingFraction ;
-		mCurveFamilyListener = curveFamilyListener;
 		magneticCube = new MagneticMedia(mCubeEdgeX, mCubeEdgeY, mCubeEdgeZ, packingFraction, dipoleRadius, mMagneticMediaListener);
 		averageMCurve = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
 		minMCurve     = new HysteresisCurve(DEFAULT_MINIMUM_H, maximumH, maximumH/DEFAULT_RECORD_POINTS);
@@ -85,8 +82,7 @@ public class CurveFamily
 	public CurveFamily(
 			int recordCount,
 			@NotNull MediaGeometry geometry,
-			float maxAppliedField,
-			@Nullable CurveFamilyListener mCurveFamilyListener) {
+			float maxAppliedField) {
 		this(
 				recordCount,
 				geometry.getXCount(),
@@ -94,8 +90,7 @@ public class CurveFamily
 				geometry.getZCount(),
 				geometry.getPackingFraction(),
 				geometry.getDipoleRadius(),
-				maxAppliedField,
-				mCurveFamilyListener
+				maxAppliedField
 
 		);
 	}
@@ -242,7 +237,6 @@ public void setMagneticCube(MagneticMedia magneticCube) {
 			generateAverageMCurve();
 			generateMinMCurve();
 			generateMaxMCurve();
-			mCurveFamilyListener.notifyCurvesDone(this);
 		}
 
 		//******************** generateMaxMCurve() ********************

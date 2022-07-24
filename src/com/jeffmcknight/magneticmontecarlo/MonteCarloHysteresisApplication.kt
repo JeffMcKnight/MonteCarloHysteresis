@@ -110,7 +110,7 @@ class MonteCarloHysteresisApplication : JFrame() {
                 when (fileChooser.showSaveDialog(null)) {
                     JFileChooser.APPROVE_OPTION -> {
                         println("$TAG - actionPerformed(): APPROVE_OPTION\t - currentDirectory: ${fileChooser.currentDirectory}\t - currentFile: ${fileChooser.selectedFile}")
-                        mContentPane.mhCurves?.writeCurvesToFile(fileChooser.currentDirectory, fileChooser.selectedFile)
+                        mContentPane.curveFamily.writeCurvesToFile(fileChooser.currentDirectory, fileChooser.selectedFile)
                     }
                     JFileChooser.CANCEL_OPTION -> println("$TAG - actionPerformed(): CANCEL_OPTION")
                     JFileChooser.ERROR_OPTION -> println("$TAG - actionPerformed(): ERROR_OPTION")

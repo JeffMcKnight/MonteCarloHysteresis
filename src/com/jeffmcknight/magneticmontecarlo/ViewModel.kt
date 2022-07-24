@@ -6,22 +6,20 @@ import com.jeffmcknight.magneticmontecarlo.model.DipoleAccumulator
 import com.jeffmcknight.magneticmontecarlo.model.DipoleAverages
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.scan
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 
 class ViewModel(private val coroutineScope: CoroutineScope) {
 
-    var recordCount: Int = 1
+    private var mediaGeometry = MediaGeometry()
+    val curveFamilyFlo = MutableStateFlow(CurveFamily(0, mediaGeometry, 0F))
 
+    val recordSingleFlo = MutableSharedFlow<MagneticMedia>()
+    var recordCount: Int = 1
     /**
      * The H field applied during recording
      * TODO: convert to MutableStateFlow
      */
     var appliedField: Float = 0.0f
-    private var mediaGeometry = MediaGeometry()
-    val recordSingleFlo: MutableSharedFlow<MagneticMedia> = MutableSharedFlow()
 
     /**
      * Emits a Pair with the last [MagneticMedia] that was recorded, and the H field that was applied during the recording
@@ -29,6 +27,10 @@ class ViewModel(private val coroutineScope: CoroutineScope) {
      */
     private val recordingDoneFlo: MutableSharedFlow<Pair<MagneticMedia, Float>> = MutableSharedFlow()
 
+    /**
+     * Sums up all the dipole value emitted since the last [MediaGeometry] or [DipoleAccumulator.fieldB] change.
+     * We use this intermediate result to determine the average dipole value over the all accumulated recordings.
+     */
     @OptIn(ExperimentalCoroutinesApi::class)
     val dipoleAccumulatorFlo: Flow<DipoleAccumulator> = recordingDoneFlo
         .scan(DipoleAccumulator(empty, 0, empty.geometry, 0.0f)) { prev: DipoleAccumulator, next: Pair<MagneticMedia, Float> ->
@@ -64,6 +66,20 @@ class ViewModel(private val coroutineScope: CoroutineScope) {
         }
     }
 
+    /**
+     * Record a set of B-H points for a specific [MediaGeometry] to show the linear and/or saturation regions of the
+     * recording.
+     */
+    fun recordBhCurve() {
+        coroutineScope.launch {
+            CurveFamily(recordCount, mediaGeometry, appliedField).also {
+                it.recordMHCurves()
+                curveFamilyFlo.emit(it)
+            }
+        }
+
+    }
+
     fun setLatticeDimenX(dimen: Int) {
         mediaGeometry = mediaGeometry.copy(xCount = dimen)
     }
@@ -82,14 +98,5 @@ class ViewModel(private val coroutineScope: CoroutineScope) {
 
     fun setPackingFraction(fraction: Float) {
         mediaGeometry = mediaGeometry.copy(packingFraction = fraction)
-    }
-
-    /**
-     * Record a set of B-H points for a specific [MediaGeometry] to show the linear and/or saturation regions of the
-     * recording.
-     * TODO: Flow-ify
-     */
-    fun recordBhCurve(curveFamilyListener: CurveFamily.CurveFamilyListener): CurveFamily {
-        return CurveFamily(recordCount, mediaGeometry, appliedField, curveFamilyListener).apply { recordMHCurves() }
     }
 }
