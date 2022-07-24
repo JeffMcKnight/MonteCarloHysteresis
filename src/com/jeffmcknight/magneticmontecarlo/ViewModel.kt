@@ -4,6 +4,7 @@ import com.jeffmcknight.magneticmontecarlo.MagneticMedia.Companion.create
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.Companion.empty
 import com.jeffmcknight.magneticmontecarlo.model.DipoleAccumulator
 import com.jeffmcknight.magneticmontecarlo.model.DipoleAverages
+import com.jeffmcknight.magneticmontecarlo.model.Hfield
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -11,21 +12,22 @@ import kotlinx.coroutines.flow.*
 class ViewModel(private val coroutineScope: CoroutineScope) {
 
     private var mediaGeometry = MediaGeometry()
-    val curveFamilyFlo = MutableStateFlow(CurveFamily(0, mediaGeometry, 0F))
-
+    val dipoleAveragesFlo = MutableStateFlow<List<TraceSpec>>(emptyList())
+    val curveFamilyFlo = MutableStateFlow(CurveFamily(0, empty.geometry, 0F))
     val recordSingleFlo = MutableSharedFlow<MagneticMedia>()
+
     var recordCount: Int = 1
     /**
      * The H field applied during recording
      * TODO: convert to MutableStateFlow
      */
-    var appliedField: Float = 0.0f
+    var appliedField: Hfield = 0.0f
 
     /**
      * Emits a Pair with the last [MagneticMedia] that was recorded, and the H field that was applied during the recording
      * TODO: make a data class instead of using Pair
      */
-    private val recordingDoneFlo: MutableSharedFlow<Pair<MagneticMedia, Float>> = MutableSharedFlow()
+    private val recordingDoneFlo = MutableSharedFlow<Pair<MagneticMedia, Hfield>>()
 
     /**
      * Sums up all the dipole value emitted since the last [MediaGeometry] or [DipoleAccumulator.fieldB] change.

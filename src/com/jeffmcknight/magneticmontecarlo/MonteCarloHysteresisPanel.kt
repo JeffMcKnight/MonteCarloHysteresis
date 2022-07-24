@@ -2,6 +2,7 @@ package com.jeffmcknight.magneticmontecarlo
 
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.MagneticMediaListener
 import com.jeffmcknight.magneticmontecarlo.model.DipoleAverages
+import com.jeffmcknight.magneticmontecarlo.model.Hfield
 import info.monitorenter.gui.chart.Chart2D
 import info.monitorenter.gui.chart.ITrace2D
 import info.monitorenter.gui.chart.traces.Trace2DSimple
@@ -17,6 +18,7 @@ import java.awt.event.ItemEvent
 import java.awt.event.KeyEvent
 import java.util.*
 import javax.swing.*
+import javax.vecmath.Point2d
 
 /**
  *
@@ -80,7 +82,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     private val mAppliedFieldRangeBox = JComboBox(H_FIELD_RANGE_ITEMS).apply {
         addItemListener {
             if (it.isSelected()) {
-                viewModel.appliedField = (it.item as Float)
+                viewModel.appliedField = (it.item as Hfield)
             }
         }
     }
@@ -99,7 +101,6 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     private val chartFrame: JFrame? = null
     private val mChartPanel: JPanel
     private val mControlsPanel: JPanel
-    private var traceColor = Color(255, 0, 0)
     private var traceHue = 0f
     private var mActiveChart: ChartType
     private var mDipoleUpdateListener: MagneticMediaListener? = null
@@ -137,6 +138,11 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         coroutineScope.launch {
             viewModel.curveFamilyFlo.collect {
                 addMhPoints(it)
+            }
+        }
+        coroutineScope.launch {
+            viewModel.dipoleAveragesFlo.collect { dipoleTraces ->
+                dipoleTraces.forEach { showAsTrace(it) }
             }
         }
     }
@@ -215,7 +221,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         val zComboBoxPanel = buildComboBoxPanel(initialComboIndex, DIMENSIONS_Z_AXIS_LABEL, mZComboBox)
         val dipoleRadiusPanel = buildComboBoxPanel(3, DIPOLE_RADIUS_LABEL, dipoleRadiusList)
         val packingFractionPanel = buildComboBoxPanel(1, PACKING_FRACTION_LABEL, mPackingFractionBox)
-        val recordCountPanel = buildComboBoxPanel(8, RECORDING_PASSES_LABEL, mRecordCountBox)
+        val recordCountPanel = buildComboBoxPanel(1, RECORDING_PASSES_LABEL, mRecordCountBox)
         val mAppliedFieldRangePanel = buildComboBoxPanel(DEFAULT_APPLIED_FIELD_ITEM, APPLIED_FIELD_RANGE_LABEL, mAppliedFieldRangeBox)
         val mRadioButtonPanel = buildButtonPanel(mRadioButtonGroup)
 
@@ -450,20 +456,31 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         // Increment the count and update the color
         // to display multiple traces on the same chart.
         mCurveTraceCount += 1
-        traceColor = Color.getHSBColor(traceHue, 1f, 0.85f)
+        val traceColor = Color.getHSBColor(traceHue, 1f, 0.85f)
         traceHue += 0.22f
         val traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, chartCurves.magneticCube)
-        val trace = Trace2DSimple().apply {
-            // Set trace properties (name, color, point shape to disc)
-            name = traceName
-            color = traceColor
-            setTracePainter(TracePainterDisc())
-        }
-        // Add the trace to the chart. This has to be done before adding points (deadlock prevention):
-        bhChart.addTrace(trace)
-        // Add the recording points to the trace
-        chartCurves.getAverageMCurve().recordPoints.forEach { trace.addPoint(it.getH().toDouble(), it.getM().toDouble()) }
+        val pointList = chartCurves.getAverageMCurve().recordPoints.map { Point2d(it.h.toDouble(), it.m.toDouble()) }
+        showAsTrace(TraceSpec(traceName, traceColor, pointList))
     }
+
+    /**
+     * Show the [TraceSpec.pointList] on [bhChart] as a [Trace2DSimple]
+     */
+    private fun showAsTrace(traceSpec: TraceSpec) {
+        Trace2DSimple()
+            .apply {
+                name = traceSpec.name
+                color = traceSpec.color
+                setTracePainter(TracePainterDisc())
+            }.also { trace ->
+                // Set trace properties (name, color, point shape to disc)
+                // Add the trace to the chart. This has to be done before adding points (deadlock prevention):
+                bhChart.addTrace(trace)
+                // Add the recording points to the trace
+                traceSpec.pointList.forEach { point -> trace.addPoint(point.x, point.y) }
+            }
+    }
+
 
     companion object {
         private val TAG = MonteCarloHysteresisPanel::class.java.simpleName
@@ -499,3 +516,11 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
 private fun ItemEvent.isSelected(): Boolean {
     return stateChange == ItemEvent.SELECTED
 }
+
+/**
+ * Everything we need to show a trace on a chart.
+ * @param name the name to display on the chart
+ * @param the color of he points to display on the chart
+ * @param pointList the points to display on the chart
+ */
+data class TraceSpec(val name: String, val color: Color, val pointList: List<Point2d>)
