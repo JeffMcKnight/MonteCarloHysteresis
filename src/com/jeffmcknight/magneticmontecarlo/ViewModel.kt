@@ -12,35 +12,35 @@ class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Re
     private var mediaGeometry = MediaGeometry()
     val dipoleAveragesFlo = MutableStateFlow<List<TraceSpec>>(emptyList())
     val curveFamilyFlo = MutableStateFlow(CurveFamily(0, empty.geometry, 0F))
-    val recordSingleFlo: Flow<MagneticMedia> = recordingDoneFlo.map { it.first }
+    val recordSingleFlo: Flow<MagneticMedia> = recordingDoneFlo.map { it.magneticMedia }
 
     var recordCount: Int = 1
     /**
      * The H field applied during recording
      * TODO: convert to MutableStateFlow
      */
-    var appliedField: Hfield = 0.0f
+    var appliedField: AppliedField = 0.0f
 
     /**
      * Emits a Pair with the last [MagneticMedia] that was recorded, and the H field that was applied during the recording
      * TODO: make a data class instead of using Pair
      */
-    private val recordingDoneFlo: MutableSharedFlow<Pair<MagneticMedia, Hfield>>
+    private val recordingDoneFlo: MutableSharedFlow<RecordingResult>
         get() = repo.recordingDoneFlo
 
     /**
-     * Sums up all the dipole value emitted since the last [MediaGeometry] or [DipoleAccumulator.fieldB] change.
+     * Sums up all the dipole value emitted since the last [MediaGeometry] or [DipoleAccumulator.appliedField] change.
      * We use this intermediate result to determine the average dipole value over the all accumulated recordings.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val dipoleAccumulatorFlo: Flow<DipoleAccumulator> = recordingDoneFlo
-        .scan(DipoleAccumulator(empty, 0, empty.geometry, 0.0f)) { prev: DipoleAccumulator, next: Pair<MagneticMedia, Float> ->
-        if (prev.geometry == next.first.geometry && prev.fieldB == next.second ) {
-            prev.dipoleList.zip(next.first) { a: DipoleSphere3f, b: DipoleSphere3f ->
-                a.apply { m += b.m }}.let { dipoleList ->
-                DipoleAccumulator(dipoleList, prev.count + 1, prev.geometry, appliedField) }
+        .scan(DipoleAccumulator(empty, 0, empty.geometry, 0.0f)) { prev: DipoleAccumulator, next: RecordingResult ->
+            if (prev.geometry == next.magneticMedia.geometry && prev.appliedField == next.appliedField) {
+                prev.dipoleList
+                    .zip(next.magneticMedia) { a: DipoleSphere3f, b: DipoleSphere3f -> a.apply { m += b.m } }
+                    .let { dipoleList -> DipoleAccumulator(dipoleList, prev.count + 1, prev.geometry, appliedField) }
         } else {
-            DipoleAccumulator(next.first, 1, next.first.geometry, next.second)
+            DipoleAccumulator(next.magneticMedia, 1, next.magneticMedia.geometry, next.appliedField)
         }
     }
 

@@ -8,13 +8,13 @@ import com.jeffmcknight.magneticmontecarlo.DipoleSphere3f
  * @param dipoleList a list of the accumulated dipole flux values
  * @param count the number of dipole sets that have been accumulated
  * @param geometry the geometry of the magnetic media that has been recorded
- * @param fieldB the B field applied to the magnetic media that has been recorded
+ * @param appliedField the DC H field applied to the magnetic media that has been recorded
  */
 data class DipoleAccumulator(
     val dipoleList: List<DipoleSphere3f>,
     val count: Int,
     val geometry: MediaGeometry,
-    val fieldB: Float
+    val appliedField: AppliedField
 ) {
 
 }

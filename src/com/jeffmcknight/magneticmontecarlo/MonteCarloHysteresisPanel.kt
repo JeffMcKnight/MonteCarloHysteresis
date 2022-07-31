@@ -1,7 +1,7 @@
 package com.jeffmcknight.magneticmontecarlo
 
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.MagneticMediaListener
-import com.jeffmcknight.magneticmontecarlo.model.Hfield
+import com.jeffmcknight.magneticmontecarlo.model.AppliedField
 import info.monitorenter.gui.chart.Chart2D
 import info.monitorenter.gui.chart.traces.Trace2DSimple
 import info.monitorenter.gui.chart.traces.painters.TracePainterDisc
@@ -80,7 +80,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     private val mAppliedFieldRangeBox = JComboBox(H_FIELD_RANGE_ITEMS).apply {
         addItemListener {
             if (it.isSelected()) {
-                viewModel.appliedField = (it.item as Hfield)
+                viewModel.appliedField = (it.item as AppliedField)
             }
         }
     }
@@ -89,8 +89,11 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     private val mCurveRadioButton = JRadioButton()
     private val mDipoleRadioButton = JRadioButton()
 
-    // ******************** getmhChart() ********************
-    // @return mhChart
+    /**
+     * The Chart that we draw all our traces onto.
+     * TODO: rename or create another chart to display data from [ViewModel.dipoleAverageFlo] and
+     * [ViewModel.recordSingleFlo]
+     */
     private val bhChart = Chart2D()
 
     // Create a frame.
