@@ -2,6 +2,7 @@ package com.jeffmcknight.magneticmontecarlo
 
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.Companion.empty
 import com.jeffmcknight.magneticmontecarlo.model.*
+import com.jeffmcknight.magneticmontecarlo.model.DipoleAccumulator.Companion.EMPTY
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -34,19 +35,19 @@ class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Re
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val dipoleAccumulatorFlo: Flow<DipoleAccumulator> = recordingDoneFlo
-        .scan(DipoleAccumulator(empty, 0, empty.geometry, 0.0f)) { prev: DipoleAccumulator, next: RecordingResult ->
-            if (prev.geometry == next.magneticMedia.geometry && prev.appliedField == next.appliedField) {
-                prev.dipoleList
+        .scan(EMPTY) { accum: DipoleAccumulator, next: RecordingResult ->
+            if (accum.geometry == next.magneticMedia.geometry && accum.appliedField == next.appliedField) {
+                accum.runningTotal.dipoleTotals
                     .zip(next.magneticMedia) { a: DipoleSphere3f, b: DipoleSphere3f -> a.apply { m += b.m } }
-                    .let { dipoleList -> DipoleAccumulator(dipoleList, prev.count + 1, prev.geometry, appliedField) }
-        } else {
-            DipoleAccumulator(next.magneticMedia, 1, next.magneticMedia.geometry, next.appliedField)
-        }
+                    .let { dipoleList -> createDipoleAccumulator(dipoleList, accum.runningTotal.count + 1, accum.geometry, appliedField) }
+            } else {
+                createDipoleAccumulator(next.magneticMedia, 1, next.magneticMedia.geometry, next.appliedField)
+            }
     }
 
     val dipoleAverageFlo: Flow<DipoleAverages> = dipoleAccumulatorFlo.map { accumulator ->
-        val floatList = accumulator.dipoleList.map { dipole -> dipole.m / accumulator.count }
-        DipoleAverages(floatList, accumulator.count)
+        val floatList = accumulator.runningTotal.dipoleTotals.map { dipole -> dipole.m / accumulator.runningTotal.count }
+        DipoleAverages(floatList, accumulator.runningTotal.count)
     }
 
     fun recordSingle() {
@@ -91,4 +92,5 @@ class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Re
     fun setPackingFraction(fraction: Float) {
         mediaGeometry = mediaGeometry.copy(packingFraction = fraction)
     }
+
 }
