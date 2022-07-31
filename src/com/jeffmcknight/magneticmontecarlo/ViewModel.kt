@@ -7,6 +7,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.awt.Color
+import java.awt.Color.*
+
 
 class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Repository) {
 
@@ -30,24 +33,49 @@ class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Re
         get() = repo.recordingDoneFlo
 
     /**
-     * Sums up all the dipole value emitted since the last [MediaGeometry] or [DipoleAccumulator.appliedField] change.
+     * Sums up all the dipole value emitted since the last [MediaGeometry] change.  We aggregate the lists of
+     * [RecordedField] and organize by the [AppliedField] (using it as the key to a mutable map).
      * We use this intermediate result to determine the average dipole value over the all accumulated recordings.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val dipoleAccumulatorFlo: Flow<DipoleAccumulator> = recordingDoneFlo
         .scan(EMPTY) { accum: DipoleAccumulator, next: RecordingResult ->
-            if (accum.geometry == next.magneticMedia.geometry && accum.appliedField == next.appliedField) {
-                accum.runningTotal.dipoleTotals
-                    .zip(next.magneticMedia) { a: DipoleSphere3f, b: DipoleSphere3f -> a.apply { m += b.m } }
-                    .let { dipoleList -> createDipoleAccumulator(dipoleList, accum.runningTotal.count + 1, accum.geometry, appliedField) }
+            // Get the list of [RecordedField]s for each dipole in the most recent simulation
+            val nextRecordedFieldList: List<RecordedField> = next.magneticMedia.map { it.m }
+            if (accum.geometry == next.magneticMedia.geometry) {
+                run {
+                    val runningTotal: RunningTotal? = accum.runningTotals[next.appliedField]
+                    val updatedTotals: List<RecordedField> = runningTotal?.let {
+                        // Add the [RecordedField] from the most recent simulation to the running total
+                        it.dipoleTotalList.zip(nextRecordedFieldList) { a: RecordedField, b: RecordedField -> a + b }
+                    } ?: nextRecordedFieldList
+                    val updatedCount = (runningTotal?.count ?: 0) + 1
+                    (accum.runningTotals + mapOf(next.appliedField to RunningTotal(updatedTotals, updatedCount)))
+                        .toMutableMap()
+                }
+                    .let { totalsMap: MutableMap<AppliedField, RunningTotal> ->
+                        DipoleAccumulator(totalsMap, accum.geometry)
+                    }
             } else {
-                createDipoleAccumulator(next.magneticMedia, 1, next.magneticMedia.geometry, next.appliedField)
+                DipoleAccumulator(
+                    mutableMapOf(next.appliedField to RunningTotal(nextRecordedFieldList, 1)),
+                    next.magneticMedia.geometry
+                )
             }
     }
 
-    val dipoleAverageFlo: Flow<DipoleAverages> = dipoleAccumulatorFlo.map { accumulator ->
-        val floatList = accumulator.runningTotal.dipoleTotals.map { dipole -> dipole.m / accumulator.runningTotal.count }
-        DipoleAverages(floatList, accumulator.runningTotal.count)
+    /**
+     * Emits a list of [DipoleAverages]
+     */
+    val dipoleAverageFlo: Flow<List<DipoleAverages>> = dipoleAccumulatorFlo.map { accumulator: DipoleAccumulator ->
+        /*val floatList = */accumulator.runningTotals.map { entry: Map.Entry<AppliedField, RunningTotal> ->
+        DipoleAverages(
+            entry.value.dipoleTotalList.map { recordedField -> recordedField / entry.value.count },
+            entry.value.count,
+            entry.key,
+            entry.key.toColor()
+        ) }
+//        DipoleAverages(floatList, accumulator.runningTotals.count,)
     }
 
     fun recordSingle() {
@@ -94,3 +122,16 @@ class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Re
     }
 
 }
+
+/**
+ * TODO: take the divisor from the max [AppliedField]
+ */
+private fun AppliedField.toColor(): Color {
+    return colorList[((this / 5) % 10 ).toInt()]
+}
+
+/** Copied from javafx.scene.paint.Color */
+val BROWN: Color = Color(0.64705884f, 0.16470589f, 0.16470589f)
+/** Copied from javafx.scene.paint.Color */
+val VIOLET = Color(0.93333334f, 0.50980395f, 0.93333334f)
+val colorList: List<Color> = listOf(BLACK, BROWN, RED, ORANGE.darker(), YELLOW.darker(), GREEN.darker(), BLUE, VIOLET, GRAY, PINK.darker())

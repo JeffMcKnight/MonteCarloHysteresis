@@ -10,29 +10,24 @@ import com.jeffmcknight.magneticmontecarlo.MagneticMedia
  *
  * See [RunningTotal]
  *
- * @param runningTotal a running total of dipole values from of a set of [RecordingResult]s
+ * @param runningTotals a running total of dipole values from of a set of [RecordingResult]s
  * @param geometry the geometry of the magnetic media that has been recorded
  * @param appliedField the DC H field applied to the magnetic media that has been recorded
  */
 data class DipoleAccumulator(
-    val runningTotal: RunningTotal,
-    val geometry: MediaGeometry,
-    val appliedField: AppliedField
+    val runningTotals: MutableMap<AppliedField, RunningTotal>,
+    val geometry: MediaGeometry
 ) {
     companion object {
-        val EMPTY = createDipoleAccumulator(MagneticMedia.empty, 0, MagneticMedia.empty.geometry, 0.0f)
+        val EMPTY = DipoleAccumulator(mutableMapOf(), MagneticMedia.empty.geometry)
     }
-}
-
-fun createDipoleAccumulator(dipoleList: List<DipoleSphere3f>, count: Int, geometry: MediaGeometry, appliedField: Float): DipoleAccumulator {
-    return DipoleAccumulator(RunningTotal(dipoleList, count), geometry, appliedField)
 }
 
 /**
  * A running total of dipole values from of a set of [RecordingResult]s.  Use to hold intermediate results. When it comes
- * time to show averaged dipole values to the user, divide the values in [dipoleTotals] by the [count]
+ * time to show averaged dipole values to the user, divide the values in [dipoleTotalList] by the [count]
 
- * @param dipoleTotals a list of the running totals of the recorded field for each dipole
- * @param count the number of recordings totalled in [dipoleTotals]
+ * @param dipoleTotalList a list of the running totals of the recorded field for each dipole
+ * @param count the number of recordings totalled in [dipoleTotalList]
  */
-data class RunningTotal(val dipoleTotals: List<DipoleSphere3f>, val count: Int)
+data class RunningTotal(val dipoleTotalList: List<RecordedField>, val count: Int)

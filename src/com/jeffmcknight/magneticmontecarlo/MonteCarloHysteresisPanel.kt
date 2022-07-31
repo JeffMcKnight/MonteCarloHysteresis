@@ -124,15 +124,17 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             }
         }
         coroutineScope.launch {
-            viewModel.dipoleAverageFlo.collect {
+            viewModel.dipoleAverageFlo.collect { traceDataList ->
                 when (mActiveChart) {
                     ChartType.DIPOLE_AVERAGES -> {
                         bhChart.removeAllTraces()
-                        val traceName = "Averages Dipoles; Ordered by Coercivity.  Recording Passes: ${it.count}"
-                        val traceColor = Color.GREEN.darker()
-                        val pointList = it.dipoles.mapIndexed { index: Int, h: Float -> Point2d(index.toDouble(), h.toDouble()) }
                         val titleXAxis = "n [Dipole rank by coercivity]"
-                        showAsTrace(TraceSpec(traceName, titleXAxis, traceColor, pointList))
+                        traceDataList.forEach { averages ->
+                            val traceName = "Averaged Dipoles\t-- Applied Field: ${averages.appliedField}\t-- Recording Passes: ${averages.count}"
+                            val traceColor = averages.color
+                            val pointList = averages.dipoles.mapIndexed { index: Int, h: Float -> Point2d(index.toDouble(), h.toDouble()) }
+                            showAsTrace(TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]"))
+                        }
                     }
                     ChartType.MH_CURVE_POINT, ChartType.MH_CURVE -> {}
                 }
@@ -417,7 +419,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         val traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, chartCurves.magneticCube)
         val titleXAxis = "H, applied [nWb]"
         val pointList = chartCurves.getAverageMCurve().recordPoints.map { Point2d(it.h.toDouble(), it.m.toDouble()) }
-        showAsTrace(TraceSpec(traceName, titleXAxis, traceColor, pointList))
+        showAsTrace(TraceSpec(traceName, titleXAxis, traceColor, pointList,"Recorded Flux [nWb/m]"))
     }
 
     /**
@@ -434,6 +436,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 // Add the trace to the chart. This has to be done before adding points (deadlock prevention):
                 bhChart.addTrace(trace)
                 bhChart.axisX.axisTitle.title = traceSpec.titleXAxis
+                bhChart.axisY.axisTitle.title = traceSpec.titleYAxis
                 // Add the recording points to the trace
                 traceSpec.pointList.forEach { point -> trace.addPoint(point.x, point.y) }
             }
@@ -480,4 +483,10 @@ private fun ItemEvent.isSelected(): Boolean {
  * @param color the color of he points to display on the chart
  * @param pointList the points to display on the chart
  */
-data class TraceSpec(val name: String, val titleXAxis: String, val color: Color, val pointList: List<Point2d>)
+data class TraceSpec(
+    val name: String,
+    val titleXAxis: String,
+    val color: Color,
+    val pointList: List<Point2d>,
+    val titleYAxis: String
+)

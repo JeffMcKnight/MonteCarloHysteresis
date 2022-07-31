@@ -20,9 +20,11 @@ import kotlin.system.exitProcess
 /**
  * The application launcher class.  The JVM launcher runs [main] to start the application.
  *
+ * FIXME: chart updates are jumpy; throttle Flow collection? or maybe manually set the chart vertical scale?
  * TODO: get the coroutine scopes right; GlobalScope works, but the linter is not happy; maybe [MainScope]?
  * TODO: add a [JFileChooser] to select files to export [DipoleSphere3f] lists
  * TODO: handle [HeadlessException]s?
+ *
  * @author jeffmcknight
  */
 class MonteCarloHysteresisApplication : JFrame() {
