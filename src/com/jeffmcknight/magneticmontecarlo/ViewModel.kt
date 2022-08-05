@@ -68,14 +68,14 @@ class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Re
      * Emits a list of [DipoleAverages]
      */
     val dipoleAverageFlo: Flow<List<DipoleAverages>> = dipoleAccumulatorFlo.map { accumulator: DipoleAccumulator ->
-        /*val floatList = */accumulator.runningTotals.map { entry: Map.Entry<AppliedField, RunningTotal> ->
-        DipoleAverages(
-            entry.value.dipoleTotalList.map { recordedField -> recordedField / entry.value.count },
-            entry.value.count,
-            entry.key,
-            entry.key.toColor()
-        ) }
-//        DipoleAverages(floatList, accumulator.runningTotals.count,)
+        accumulator.runningTotals.map { entry: Map.Entry<AppliedField, RunningTotal> ->
+            DipoleAverages(
+                entry.value.dipoleTotalList.map { recordedField -> recordedField / entry.value.count },
+                entry.value.count,
+                entry.key,
+                entry.key.toColor()
+            )
+        }
     }
 
     fun recordSingle() {
@@ -134,4 +134,4 @@ private fun AppliedField.toColor(): Color {
 val BROWN: Color = Color(0.64705884f, 0.16470589f, 0.16470589f)
 /** Copied from javafx.scene.paint.Color */
 val VIOLET = Color(0.93333334f, 0.50980395f, 0.93333334f)
-val colorList: List<Color> = listOf(BLACK, BROWN, RED, ORANGE.darker(), YELLOW.darker(), GREEN.darker(), BLUE, VIOLET, GRAY, PINK.darker())
+val colorList: List<Color> = listOf(BLACK, BROWN, RED, ORANGE, YELLOW.darker(), GREEN.darker(), BLUE, VIOLET, GRAY, PINK)

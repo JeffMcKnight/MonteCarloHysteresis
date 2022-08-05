@@ -152,7 +152,6 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         }
     }
 
-    // *************** buildRunConfigPanel() ***************
     /**
      * Build JPanel on left side of JFrame that contains
      * labeled JComboBoxes to set simulation parameters
@@ -197,7 +196,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         val zComboBoxPanel = buildComboBoxPanel(initialComboIndex, DIMENSIONS_Z_AXIS_LABEL, mZComboBox)
         val dipoleRadiusPanel = buildComboBoxPanel(3, DIPOLE_RADIUS_LABEL, dipoleRadiusList)
         val packingFractionPanel = buildComboBoxPanel(1, PACKING_FRACTION_LABEL, mPackingFractionBox)
-        val recordCountPanel = buildComboBoxPanel(1, RECORDING_PASSES_LABEL, mRecordCountBox)
+        val recordCountPanel = buildComboBoxPanel(INITIAL_RECORD_COUNT_INDEX, RECORDING_PASSES_LABEL, mRecordCountBox)
         val mAppliedFieldRangePanel = buildComboBoxPanel(DEFAULT_APPLIED_FIELD_ITEM, APPLIED_FIELD_RANGE_LABEL, mAppliedFieldRangeBox)
 
         with(mControlsPanel) {
@@ -446,6 +445,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     companion object {
         private val TAG = MonteCarloHysteresisPanel::class.java.simpleName
         private const val serialVersionUID = 5824180412325621552L
+        const val INITIAL_RECORD_COUNT_INDEX = 0
         const val DEFAULT_BORDER_SPACE = 30
         const val DEFAULT_APPLIED_FIELD_ITEM = 1
         const val SATURATION_M = 100.0f
