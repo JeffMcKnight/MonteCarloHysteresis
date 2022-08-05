@@ -1,68 +1,90 @@
 package com.jeffmcknight.magneticmontecarlo
 
-import com.jeffmcknight.magneticmontecarlo.MagneticMedia.Companion.create
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.Companion.empty
-import com.jeffmcknight.magneticmontecarlo.model.DipoleAccumulator
-import com.jeffmcknight.magneticmontecarlo.model.DipoleAverages
-import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
-import kotlinx.coroutines.*
+import com.jeffmcknight.magneticmontecarlo.model.*
+import com.jeffmcknight.magneticmontecarlo.model.DipoleAccumulator.Companion.EMPTY
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import java.awt.Color
+import java.awt.Color.*
 
-class ViewModel(private val coroutineScope: CoroutineScope) {
+
+class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Repository) {
 
     private var mediaGeometry = MediaGeometry()
-    val curveFamilyFlo = MutableStateFlow(CurveFamily(0, mediaGeometry, 0F))
+    val dipoleAveragesFlo = MutableStateFlow<List<TraceSpec>>(emptyList())
+    val curveFamilyFlo = MutableStateFlow(CurveFamily(0, empty.geometry, 0F))
+    val recordSingleFlo: Flow<MagneticMedia> = recordingDoneFlo.map { it.magneticMedia }
 
-    val recordSingleFlo = MutableSharedFlow<MagneticMedia>()
     var recordCount: Int = 1
     /**
      * The H field applied during recording
      * TODO: convert to MutableStateFlow
      */
-    var appliedField: Float = 0.0f
+    var appliedField: AppliedField = 0.0f
 
     /**
      * Emits a Pair with the last [MagneticMedia] that was recorded, and the H field that was applied during the recording
      * TODO: make a data class instead of using Pair
      */
-    private val recordingDoneFlo: MutableSharedFlow<Pair<MagneticMedia, Float>> = MutableSharedFlow()
+    private val recordingDoneFlo: MutableSharedFlow<RecordingResult>
+        get() = repo.recordingDoneFlo
 
     /**
-     * Sums up all the dipole value emitted since the last [MediaGeometry] or [DipoleAccumulator.fieldB] change.
+     * Sums up all the dipole value emitted since the last [MediaGeometry] change.  We aggregate the lists of
+     * [RecordedField] and organize by the [AppliedField] (using it as the key to a mutable map).
      * We use this intermediate result to determine the average dipole value over the all accumulated recordings.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    val dipoleAccumulatorFlo: Flow<DipoleAccumulator> = recordingDoneFlo
-        .scan(DipoleAccumulator(empty, 0, empty.geometry, 0.0f)) { prev: DipoleAccumulator, next: Pair<MagneticMedia, Float> ->
-        if (prev.geometry == next.first.geometry && prev.fieldB == next.second ) {
-            prev.dipoleList.zip(next.first) { a: DipoleSphere3f, b: DipoleSphere3f ->
-                a.apply { m += b.m }}.let { dipoleList ->
-                DipoleAccumulator(dipoleList, prev.count + 1, prev.geometry, appliedField) }
-        } else {
-            DipoleAccumulator(next.first, 1, next.first.geometry, next.second)
-        }
+    private val dipoleAccumulatorFlo: Flow<DipoleAccumulator> = recordingDoneFlo
+        .scan(EMPTY) { accum: DipoleAccumulator, next: RecordingResult ->
+            // Get the list of [RecordedField]s for each dipole in the most recent simulation
+            val nextRecordedFieldList: List<RecordedField> = next.magneticMedia.map { it.m }
+            if (accum.geometry == next.magneticMedia.geometry) {
+                run {
+                    val runningTotal: RunningTotal? = accum.runningTotals[next.appliedField]
+                    val updatedTotals: List<RecordedField> = runningTotal?.let {
+                        // Add the [RecordedField] from the most recent simulation to the running total
+                        it.dipoleTotalList.zip(nextRecordedFieldList) { a: RecordedField, b: RecordedField -> a + b }
+                    } ?: nextRecordedFieldList
+                    val updatedCount = (runningTotal?.count ?: 0) + 1
+                    (accum.runningTotals + mapOf(next.appliedField to RunningTotal(updatedTotals, updatedCount)))
+                        .toMutableMap()
+                }
+                    .let { totalsMap: MutableMap<AppliedField, RunningTotal> ->
+                        DipoleAccumulator(totalsMap, accum.geometry)
+                    }
+            } else {
+                DipoleAccumulator(
+                    mutableMapOf(next.appliedField to RunningTotal(nextRecordedFieldList, 1)),
+                    next.magneticMedia.geometry
+                )
+            }
     }
 
-    val dipoleAverageFlo: Flow<DipoleAverages> = dipoleAccumulatorFlo.map{ accum ->
-        val floatList = accum.dipoleList.map { dipole -> dipole.m / accum.count }
-        DipoleAverages(floatList, accum.count)
+    /**
+     * Emits a list of [DipoleAverages]
+     */
+    val dipoleAverageFlo: Flow<List<DipoleAverages>> = dipoleAccumulatorFlo.map { accumulator: DipoleAccumulator ->
+        accumulator.runningTotals.map { entry: Map.Entry<AppliedField, RunningTotal> ->
+            DipoleAverages(
+                entry.value.dipoleTotalList.map { recordedField -> recordedField / entry.value.count },
+                entry.value.count,
+                entry.key,
+                entry.key.toColor()
+            )
+        }
     }
 
     fun recordSingle() {
-        coroutineScope.launch {
-            val magneticMedia = create(mediaGeometry, null)
-            magneticMedia.recordWithAcBias(appliedField)
-            recordSingleFlo.emit(magneticMedia)
-        }
+        repo.record(mediaGeometry, appliedField)
     }
 
     fun recordMultiple() {
-        for (i in 1..recordCount) {
-            coroutineScope.launch {
-                val magneticMedia = create(mediaGeometry, null)
-                magneticMedia.recordWithAcBias(appliedField)
-                recordingDoneFlo.emit(Pair(magneticMedia, appliedField))
-            }
+        repeat(recordCount) {
+            repo.record(mediaGeometry, appliedField)
         }
     }
 
@@ -77,7 +99,6 @@ class ViewModel(private val coroutineScope: CoroutineScope) {
                 curveFamilyFlo.emit(it)
             }
         }
-
     }
 
     fun setLatticeDimenX(dimen: Int) {
@@ -99,4 +120,18 @@ class ViewModel(private val coroutineScope: CoroutineScope) {
     fun setPackingFraction(fraction: Float) {
         mediaGeometry = mediaGeometry.copy(packingFraction = fraction)
     }
+
 }
+
+/**
+ * TODO: take the divisor from the max [AppliedField]
+ */
+private fun AppliedField.toColor(): Color {
+    return colorList[((this / 5) % 10 ).toInt()]
+}
+
+/** Copied from javafx.scene.paint.Color */
+val BROWN: Color = Color(0.64705884f, 0.16470589f, 0.16470589f)
+/** Copied from javafx.scene.paint.Color */
+val VIOLET = Color(0.93333334f, 0.50980395f, 0.93333334f)
+val colorList: List<Color> = listOf(BLACK, BROWN, RED, ORANGE, YELLOW.darker(), GREEN.darker(), BLUE, VIOLET, GRAY, PINK)
