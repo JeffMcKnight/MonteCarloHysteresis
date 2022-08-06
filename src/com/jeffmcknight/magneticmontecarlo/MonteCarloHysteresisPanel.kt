@@ -123,6 +123,9 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 }
             }
         }
+        /**
+         * TODO: can we just update traces rather than removing and replacing all of them
+         */
         coroutineScope.launch {
             viewModel.dipoleAverageFlo.collect { traceDataList ->
                 when (mActiveChart) {

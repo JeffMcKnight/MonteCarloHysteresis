@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.awt.Color
 import java.awt.Color.*
+import kotlin.math.absoluteValue
 
 
 class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Repository) {
@@ -62,7 +63,7 @@ class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Re
                     next.magneticMedia.geometry
                 )
             }
-    }
+        }
 
     /**
      * Emits a list of [DipoleAverages]
@@ -127,7 +128,7 @@ class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Re
  * TODO: take the divisor from the max [AppliedField]
  */
 private fun AppliedField.toColor(): Color {
-    return colorList[((this / 5) % 10 ).toInt()]
+    return colorList[((this.absoluteValue / 5) % 10 ).toInt()]
 }
 
 /** Copied from javafx.scene.paint.Color */
