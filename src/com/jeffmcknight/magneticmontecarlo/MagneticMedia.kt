@@ -87,13 +87,6 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
 
     //**********addDipoleAt()**********
     // Add dipole at the specified coords to the end of the current particle assembly
-    fun addDipoleAt(x: Int, y: Int, z: Int) {
-        val dipolefTemp = DipoleSphere3f(x * a, y * a, z * a) // newDipole is a temp Dipole object to be added to ArrayList
-        this.add(dipolefTemp)
-    }
-
-    //**********addDipoleAt()**********
-    // Add dipole at the specified coords to the end of the current particle assembly
     fun addDipoleAt(point3fDipoleCoord: Point3f?) {
         val dipolefTemp = DipoleSphere3f(point3fDipoleCoord) // newDipole is a temp Dipole object to be added to ArrayList
         this.add(dipolefTemp)
@@ -171,23 +164,6 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
         return netMField
     }
 
-    /**
-     * TODO: implement using ThreadMessager and ChunkMaker
-     * @param i - the index of the dipole where we calculate M, the net magnetic remanence field
-     * @return - the net magnetic remanence field, M, at dipole with index "i"
-     */
-    private fun calculateNetMFieldMultiThreaded(i: Int): Float {
-        var netMField = 0f
-        for (j in 0 until i) {
-            netMField += this[i].getHInteraction(this[j])
-        }
-        return netMField
-    }
-
-    private suspend fun calculateH(dipole: DipoleSphere3f, otherDipole: DipoleSphere3f) =
-            dipole.getHInteraction(otherDipole)
-
-    //**********calculateNetM()**********
     //** Calculate the net magnetism, M, for the entire particle assembly **
     fun calculateNetM(): Float {
         m = 0.0f
