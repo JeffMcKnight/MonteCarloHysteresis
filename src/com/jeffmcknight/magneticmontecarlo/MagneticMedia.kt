@@ -1,14 +1,12 @@
 package com.jeffmcknight.magneticmontecarlo
 
-import com.jeffmcknight.magneticmontecarlo.model.DipoleAccumulator
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
 import javax.vecmath.Point3f
 
-//import java.util.*;
-//import java.util.List;
-// **********Class for Single Domain Particle Assembly
-// **********Container for dipole elements 
-//**********xDim,yDim,zDim indicate dipole count in each direction
+/**
+ * Class for Single Domain Particle Assembly
+ * Container for dipole elements
+ */
 class MagneticMedia : ArrayList<DipoleSphere3f> {
     val geometry: MediaGeometry
         get() {
@@ -29,26 +27,10 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
     var zCount: Int
         private set
 
-    // ********** Setters and Getters **********
     var dipoleRadius = 0f
 
-    //******************** setPackingFraction() ********************
-    //******************** getPackingFraction() ********************
     var packingFraction = 0f
 
-    //	private int particlesCount;			// Number of dipoles particles in lattice
-    //	private Tuple3i gridDimensions;		// set lattice dimensions
-    //	private float hDC;					// Applied DC magnetic field
-    //	@SuppressWarnings("rawtypes")
-    //	private ArrayList arrayList;			// Set of dipole particles in SDP assembly
-    private var mUpdateListener: MagneticMediaListener? = null
-
-    interface MagneticMediaListener {
-        fun onRecordingDone(magneticMedia: MagneticMedia)
-        fun onDipoleFixated(dipoleSphere3f: DipoleSphere3f)
-    }
-
-    //**********Constructors**********
     constructor(x: Int = 0, y: Int = 0, z: Int = 0) : super(x * y * z) {
         a = MonteCarloHysteresisPanel.DEFAULT_INDEX_A
         m = 0.0f
@@ -66,15 +48,14 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
      * @param z
      * @param packingFraction
      * @param dipoleRadius
-     * @param updateListener
      */
     constructor(
-            x: Int,
-            y: Int,
-            z: Int,
-            packingFraction: Float,
-            dipoleRadius: Float,
-            updateListener: MagneticMediaListener?) : super(x * y * z) {
+        x: Int,
+        y: Int,
+        z: Int,
+        packingFraction: Float,
+        dipoleRadius: Float
+    ) : super(x * y * z) {
         a = 2f * dipoleRadius / packingFraction
         m = 0.0f
         xCount = x
@@ -83,7 +64,6 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
         this.dipoleRadius = dipoleRadius
         this.packingFraction = packingFraction
         populateSequential()
-        mUpdateListener = updateListener
     }
 
     /**
@@ -142,12 +122,8 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
         for (i in 0 until cellCount) {
             // Fixate a single dipole up or down.
             this[i].m = fixateDipole(i, hApplied)
-            // Notify listener
-            mUpdateListener?.onDipoleFixated(this[i])
             m += this[i].m
         }
-        // TODO: Use this Listener for both MHCurve and individual dipole charts so it will never be null.
-        mUpdateListener?.onRecordingDone(this)
         return m / cellCount
     }
 
@@ -226,9 +202,9 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
 
     companion object {
         val empty = MagneticMedia()
-        fun create(geometry: MediaGeometry, listener: MagneticMediaListener?): MagneticMedia {
+        fun create(geometry: MediaGeometry): MagneticMedia {
             return with(geometry) {
-                MagneticMedia(xCount, yCount, zCount, packingFraction, dipoleRadius, listener).also {
+                MagneticMedia(xCount, yCount, zCount, packingFraction, dipoleRadius).also {
                     it.randomizeLattice()
                 }
             }
