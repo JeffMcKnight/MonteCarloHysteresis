@@ -184,7 +184,7 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
         return netMField
     }
 
-    private suspend fun calculateH(dipole: DipoleSphere3f, otherDipole: DipoleSphere3f?) =
+    private suspend fun calculateH(dipole: DipoleSphere3f, otherDipole: DipoleSphere3f) =
             dipole.getHInteraction(otherDipole)
 
     //**********calculateNetM()**********
