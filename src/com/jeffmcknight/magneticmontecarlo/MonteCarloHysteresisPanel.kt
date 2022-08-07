@@ -156,11 +156,6 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 addMhPoints(it)
             }
         }
-//        coroutineScope.launch {
-//            viewModel.dipoleAveragesFlo.collect { dipoleTraces ->
-//                dipoleTraces.forEach { showAsTrace(it) }
-//            }
-//        }
         coroutineScope.launch {
             viewModel.interactionAverageTraceFlo.collect { traces: List<TraceSpec> ->
                 when (mActiveChart) {

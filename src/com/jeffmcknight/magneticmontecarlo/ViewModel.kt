@@ -89,6 +89,7 @@ class ViewModel(
     /**
      * Record a set of B-H points for a specific [MediaGeometry] to show the linear and/or saturation regions of the
      * recording.
+     * TODO: refactor to use repo
      */
     fun recordBhCurve() {
         coroutineScope.launch {
