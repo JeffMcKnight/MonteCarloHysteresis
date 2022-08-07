@@ -1,5 +1,6 @@
 package com.jeffmcknight.magneticmontecarlo
 
+import com.jeffmcknight.magneticmontecarlo.ChartType.*
 import com.jeffmcknight.magneticmontecarlo.model.AppliedField
 import info.monitorenter.gui.chart.Chart2D
 import info.monitorenter.gui.chart.traces.Trace2DSimple
@@ -18,6 +19,13 @@ import javax.swing.*
 import javax.vecmath.Point2d
 
 /**
+ * UI that displays the data as charts.
+ *
+ * TODO: add chart for interaction field standard deviation
+ * TODO: move radio button handling logic to ViewModel (I think we're doing processing for charts that we're not showing)
+ * TODO: add stop button to stop recordings in progress
+ * TODO: add clear button to clear charted data
+ * TODO: reduce chart jank (throttle Flow emissions?)
  *
  */
 class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope: CoroutineScope) : JPanel(), ActionListener {
@@ -98,7 +106,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
 
     init {
         CurveFamily.getDefaultRecordPoints()
-        mActiveChart = ChartType.MH_CURVE
+        mActiveChart = MH_CURVE
         // Create a frame.
         this.layout = BoxLayout(this, BoxLayout.X_AXIS)
         mControlsPanel = JPanel()
@@ -115,11 +123,11 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         coroutineScope.launch {
             viewModel.recordSingleFlo.collect { magneticMedia ->
                 when (mActiveChart) {
-                    ChartType.MH_CURVE_POINT -> {
+                    MH_CURVE_POINT -> {
                         bhChart.removeAllTraces()
                         showDipoleTraces(magneticMedia)
                     }
-                    ChartType.DIPOLE_AVERAGES, ChartType.MH_CURVE -> {}
+                    DIPOLE_AVERAGES, INTERACTION_AVERAGES, MH_CURVE -> {}
                 }
             }
         }
@@ -129,7 +137,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         coroutineScope.launch {
             viewModel.dipoleAverageFlo.collect { traceDataList ->
                 when (mActiveChart) {
-                    ChartType.DIPOLE_AVERAGES -> {
+                    DIPOLE_AVERAGES -> {
                         bhChart.removeAllTraces()
                         val titleXAxis = "n [Dipole rank by coercivity]"
                         traceDataList.forEach { averages ->
@@ -139,7 +147,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                             showAsTrace(TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]"))
                         }
                     }
-                    ChartType.MH_CURVE_POINT, ChartType.MH_CURVE -> {}
+                    INTERACTION_AVERAGES, MH_CURVE_POINT, MH_CURVE -> {}
                 }
             }
         }
@@ -148,9 +156,21 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 addMhPoints(it)
             }
         }
+//        coroutineScope.launch {
+//            viewModel.dipoleAveragesFlo.collect { dipoleTraces ->
+//                dipoleTraces.forEach { showAsTrace(it) }
+//            }
+//        }
         coroutineScope.launch {
-            viewModel.dipoleAveragesFlo.collect { dipoleTraces ->
-                dipoleTraces.forEach { showAsTrace(it) }
+            viewModel.interactionAverageTraceFlo.collect { traces: List<TraceSpec> ->
+                when (mActiveChart) {
+                    INTERACTION_AVERAGES -> {
+                        bhChart.removeAllTraces()
+                        traces.forEach { showAsTrace(it) }
+                    }
+                    DIPOLE_AVERAGES, MH_CURVE_POINT, MH_CURVE -> {}
+                }
+
             }
         }
     }
@@ -173,7 +193,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             text = DIPOLE_BUTTON_TEXT
             addActionListener {
                 bhChart.removeAllTraces()
-                mActiveChart = ChartType.MH_CURVE_POINT
+                mActiveChart = MH_CURVE_POINT
             }
         }
 
@@ -181,7 +201,15 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             text = AVERAGED_DIPOLE_BUTTON_TEXT
             addActionListener {
                 bhChart.removeAllTraces()
-                mActiveChart = ChartType.DIPOLE_AVERAGES
+                mActiveChart = DIPOLE_AVERAGES
+            }
+        }
+
+        val averagedInteractionsRadioButton = JRadioButton().apply {
+            text = AVERAGED_INTERACTIONS_BUTTON_TEXT
+            addActionListener {
+                bhChart.removeAllTraces()
+                mActiveChart = INTERACTION_AVERAGES
             }
         }
 
@@ -191,6 +219,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             add(curveRadioButton)
             add(dipoleRadioButton)
             add(averagedDipoleRadioButton)
+            add(averagedInteractionsRadioButton)
         }
 
         // Create combo box panels for lattice dimensions
@@ -220,6 +249,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             add(curveRadioButton)
             add(dipoleRadioButton)
             add(averagedDipoleRadioButton)
+            add(averagedInteractionsRadioButton)
         }
 
         // Add vertical space between radio buttons and run JButton
@@ -339,7 +369,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
      * Show [CurveFamily] data points if we have already run a simulation.
      */
     private fun showMhCurveChart() {
-        mActiveChart = ChartType.MH_CURVE
+        mActiveChart = MH_CURVE
         mAppliedFieldRangeBox.name = APPLIED_FIELD_RANGE_LABEL
         bhChart.axisX.axisTitle.title = "H [nWb]"
         bhChart.removeAllTraces()
@@ -383,9 +413,9 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     fun runSimulation(actionCommand: String) {
         if (actionCommand == RUN_SIMULATION) {
             when (mActiveChart) {
-                ChartType.DIPOLE_AVERAGES -> viewModel.recordMultiple()
-                ChartType.MH_CURVE -> viewModel.recordBhCurve()
-                ChartType.MH_CURVE_POINT -> viewModel.recordSingle()
+                DIPOLE_AVERAGES, INTERACTION_AVERAGES -> viewModel.recordMultiple()
+                MH_CURVE -> viewModel.recordBhCurve()
+                MH_CURVE_POINT -> viewModel.recordSingle()
             }
         }
     }
@@ -465,6 +495,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         const val APPLIED_FIELD_RANGE_LABEL = "Maximum Applied Field (H)"
         const val APPLIED_FIELD_LABEL = "Applied Field (H)"
         const val AVERAGED_DIPOLE_BUTTON_TEXT = "Show Averaged Dipoles"
+        const val AVERAGED_INTERACTIONS_BUTTON_TEXT = "Show Averaged Interaction Fields"
         const val CURVE_BUTTON_TEXT = "Show M-H Curve"
         const val DIPOLE_BUTTON_TEXT = "Show Dipole"
         internal const val RUN_SIMULATION = "run_simulation"

@@ -1,13 +1,21 @@
 package com.jeffmcknight.magneticmontecarlo
 
+import com.jeffmcknight.magneticmontecarlo.MonteCarloHysteresisPanel.Companion.SATURATION_M
+import com.jeffmcknight.magneticmontecarlo.model.InteractionField
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
 import javax.vecmath.Point3f
+import kotlin.random.Random
 
 /**
  * Class for Single Domain Particle Assembly
  * Container for dipole elements
  */
 class MagneticMedia : ArrayList<DipoleSphere3f> {
+    /**
+     * Intermediate results. This is a list of the [InteractionField]s that we calculated at each
+     * [DipoleSphere3f] as we determined whether that dipole would fixate up or down.
+     */
+    val netInteractionFields by lazy { MutableList<InteractionField>(size) { Float.NaN } }
     val geometry: MediaGeometry
         get() {
             return MediaGeometry(xCount, yCount, zCount, packingFraction, dipoleRadius)
@@ -121,18 +129,23 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
     }
 
     /**
-     * Fixate the magnetic orientation for a single particle
+     * Fixate the magnetic orientation for a single particle.
+     *
+     * We randomly chose +/- [SATURATION_M] if [netBField] == 0; the most common case is when we calculate the first
+     * dipole for an applied field of 0.0F.
+     * TODO: calculate the proper return value rather than use the arbitrarily chosen [SATURATION_M]
+     *
+     * @return the recorded magnetic field for the [DipoleSphere3f] at index [i]
      */
     private fun fixateDipole(i: Int, appliedHField: Float): Float {
-        val fixatedM: Float
         val netMField = calculateNetMField(i)
         val netBField = netMField + appliedHField
-        fixatedM = if (netBField > 0.0f) {
-            MonteCarloHysteresisPanel.SATURATION_M
-        } else {
-            -MonteCarloHysteresisPanel.SATURATION_M
+        netInteractionFields[i] = netMField
+        return when {
+            netBField > 0.0f -> SATURATION_M
+            netBField < 0.0f -> -SATURATION_M
+            else -> if (Random.nextBoolean()) SATURATION_M else -SATURATION_M
         }
-        return fixatedM
     }
 
     /**
@@ -141,8 +154,8 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
      * @param i - the index of the dipole where we calculate M, the net magnetic remanence field
      * @return - the net magnetic remanence field, M, at dipole with index "i"
      */
-    private fun calculateNetMField(i: Int): Float {
-        var netMField = 0f
+    private fun calculateNetMField(i: Int): InteractionField {
+        var netMField: InteractionField = 0f
 //        runBlocking { // this: CoroutineScope
 //            launch { // launch a new coroutine and continue
 //                delay(1000L) // non-blocking delay for 1 second (default time unit is ms)

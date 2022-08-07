@@ -9,13 +9,16 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.awt.Color
 import java.awt.Color.*
+import javax.vecmath.Point2d
 import kotlin.math.absoluteValue
 
 
+/**
+ * TODO: unit tests!
+ */
 class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Repository) {
 
     private var mediaGeometry = MediaGeometry()
-    val dipoleAveragesFlo = MutableStateFlow<List<TraceSpec>>(emptyList())
     val curveFamilyFlo = MutableStateFlow(CurveFamily(0, empty.geometry, 0F))
     val recordSingleFlo: Flow<MagneticMedia> = recordingDoneFlo.map { it.magneticMedia }
 
@@ -34,28 +37,97 @@ class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Re
         get() = repo.recordingDoneFlo
 
     /**
+     * Emits a Pair with the last [MagneticMedia] that was recorded, and the H field that was applied during the recording
+     * TODO: make a data class instead of using Pair
+     */
+    private val interactionFieldsFlo: Flow<InteractionResult>
+        get() = repo.recordingDoneFlo
+            .map { InteractionResult(it.magneticMedia.netInteractionFields.toList(), it.appliedField, it.magneticMedia.geometry) }
+
+    /**
+     * Accumulates the total interaction field at each dipole so we can calculate the average field and corresponding
+     * standard deviation at each dipole.
+     * TODO: refactor to use common code from [dipoleAccumulatorFlo]
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val interactionAccumulatorFlo: Flow<InteractionAccumulator> = interactionFieldsFlo
+        .scan(InteractionAccumulator.EMPTY) { acc: InteractionAccumulator, next: InteractionResult ->
+        // Get the list of [RecordedField]s for each dipole in the most recent simulation
+        val nextInteractionFieldList: List<InteractionField> = next.interactionFields
+        if (acc.geometry == next.geometry) {
+            run {
+                val runningTotal: InteractionTotal? = acc.runningTotals[next.appliedField]
+                val updatedTotals: List<InteractionField> = runningTotal?.let {
+                    // Add the [RecordedField] from the most recent simulation to the running total
+                    it.interactionFieldTotals.zip(nextInteractionFieldList) { a: InteractionField, b: InteractionField -> a + b }
+                } ?: nextInteractionFieldList
+                val updatedCount = (runningTotal?.count ?: 0) + 1
+                val interactionTotal = InteractionTotal(updatedTotals, updatedCount)
+                return@run (acc.runningTotals + mapOf(next.appliedField to interactionTotal)).toMutableMap()
+            }
+                .let { totalsMap: MutableMap<AppliedField, InteractionTotal> -> InteractionAccumulator(totalsMap, acc.geometry) }
+        } else {
+            val interactionTotal = InteractionTotal(nextInteractionFieldList, 1)
+            return@scan InteractionAccumulator(
+                mutableMapOf(next.appliedField to interactionTotal),
+                next.geometry
+            )
+        }
+    }
+
+    /**
+     * Emits a list of [DipoleAverages]
+     */
+    private val interactionAverageFlo: Flow<List<InteractionAverages>> = interactionAccumulatorFlo.map { acc: InteractionAccumulator ->
+        acc.runningTotals.map { entry: Map.Entry<AppliedField, InteractionTotal> ->
+            InteractionAverages(
+                entry.value.interactionFieldTotals.map { recordedField -> recordedField / entry.value.count },
+                entry.value.count,
+                entry.key,
+                entry.key.toColor()
+            )
+        }
+    }
+
+    val interactionAverageTraceFlo: Flow<List<TraceSpec>> = interactionAverageFlo.map {traceDataList: List<InteractionAverages> ->
+        traceDataList.map { averages: InteractionAverages ->
+            val titleXAxis = "n [Dipole rank by coercivity]"
+            val traceName =
+                "Averaged Interaction at Dipoles\t-- Applied Field: ${averages.appliedField}\t-- Recording Passes: ${averages.count}"
+            val traceColor = averages.color
+            val pointList = averages.averageInteractionFields.mapIndexed { index: Int, h: InteractionField ->
+                Point2d(index.toDouble(), h.toDouble())
+            }
+            TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]")
+        }
+
+    }
+
+
+
+    /**
      * Sums up all the dipole value emitted since the last [MediaGeometry] change.  We aggregate the lists of
      * [RecordedField] and organize by the [AppliedField] (using it as the key to a mutable map).
      * We use this intermediate result to determine the average dipole value over the all accumulated recordings.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val dipoleAccumulatorFlo: Flow<DipoleAccumulator> = recordingDoneFlo
-        .scan(EMPTY) { accum: DipoleAccumulator, next: RecordingResult ->
+        .scan(EMPTY) { acc: DipoleAccumulator, next: RecordingResult ->
             // Get the list of [RecordedField]s for each dipole in the most recent simulation
             val nextRecordedFieldList: List<RecordedField> = next.magneticMedia.map { it.m }
-            if (accum.geometry == next.magneticMedia.geometry) {
+            if (acc.geometry == next.magneticMedia.geometry) {
                 run {
-                    val runningTotal: RunningTotal? = accum.runningTotals[next.appliedField]
+                    val runningTotal: RunningTotal? = acc.runningTotals[next.appliedField]
                     val updatedTotals: List<RecordedField> = runningTotal?.let {
                         // Add the [RecordedField] from the most recent simulation to the running total
                         it.dipoleTotalList.zip(nextRecordedFieldList) { a: RecordedField, b: RecordedField -> a + b }
                     } ?: nextRecordedFieldList
                     val updatedCount = (runningTotal?.count ?: 0) + 1
-                    (accum.runningTotals + mapOf(next.appliedField to RunningTotal(updatedTotals, updatedCount)))
+                    (acc.runningTotals + mapOf(next.appliedField to RunningTotal(updatedTotals, updatedCount)))
                         .toMutableMap()
                 }
                     .let { totalsMap: MutableMap<AppliedField, RunningTotal> ->
-                        DipoleAccumulator(totalsMap, accum.geometry)
+                        DipoleAccumulator(totalsMap, acc.geometry)
                     }
             } else {
                 DipoleAccumulator(
@@ -79,10 +151,16 @@ class ViewModel(private val coroutineScope: CoroutineScope, private val repo: Re
         }
     }
 
+    /**
+     * Perform a single recording upon a [MagneticMedia]
+     */
     fun recordSingle() {
         repo.record(mediaGeometry, appliedField)
     }
 
+    /**
+     * Perform [recordCount] recordings.
+     */
     fun recordMultiple() {
         repeat(recordCount) {
             repo.record(mediaGeometry, appliedField)
