@@ -1,15 +1,21 @@
 package com.jeffmcknight.magneticmontecarlo
 
-import com.jeffmcknight.magneticmontecarlo.model.DipoleAccumulator
+import com.jeffmcknight.magneticmontecarlo.MonteCarloHysteresisPanel.Companion.SATURATION_M
+import com.jeffmcknight.magneticmontecarlo.model.InteractionField
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
 import javax.vecmath.Point3f
+import kotlin.random.Random
 
-//import java.util.*;
-//import java.util.List;
-// **********Class for Single Domain Particle Assembly
-// **********Container for dipole elements 
-//**********xDim,yDim,zDim indicate dipole count in each direction
+/**
+ * Class for Single Domain Particle Assembly
+ * Container for dipole elements
+ */
 class MagneticMedia : ArrayList<DipoleSphere3f> {
+    /**
+     * Intermediate results. This is a list of the [InteractionField]s that we calculated at each
+     * [DipoleSphere3f] as we determined whether that dipole would fixate up or down.
+     */
+    val netInteractionFields by lazy { MutableList<InteractionField>(size) { Float.NaN } }
     val geometry: MediaGeometry
         get() {
             return MediaGeometry(xCount, yCount, zCount, packingFraction, dipoleRadius)
@@ -29,26 +35,10 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
     var zCount: Int
         private set
 
-    // ********** Setters and Getters **********
     var dipoleRadius = 0f
 
-    //******************** setPackingFraction() ********************
-    //******************** getPackingFraction() ********************
     var packingFraction = 0f
 
-    //	private int particlesCount;			// Number of dipoles particles in lattice
-    //	private Tuple3i gridDimensions;		// set lattice dimensions
-    //	private float hDC;					// Applied DC magnetic field
-    //	@SuppressWarnings("rawtypes")
-    //	private ArrayList arrayList;			// Set of dipole particles in SDP assembly
-    private var mUpdateListener: MagneticMediaListener? = null
-
-    interface MagneticMediaListener {
-        fun onRecordingDone(magneticMedia: MagneticMedia)
-        fun onDipoleFixated(dipoleSphere3f: DipoleSphere3f)
-    }
-
-    //**********Constructors**********
     constructor(x: Int = 0, y: Int = 0, z: Int = 0) : super(x * y * z) {
         a = MonteCarloHysteresisPanel.DEFAULT_INDEX_A
         m = 0.0f
@@ -66,15 +56,14 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
      * @param z
      * @param packingFraction
      * @param dipoleRadius
-     * @param updateListener
      */
     constructor(
-            x: Int,
-            y: Int,
-            z: Int,
-            packingFraction: Float,
-            dipoleRadius: Float,
-            updateListener: MagneticMediaListener?) : super(x * y * z) {
+        x: Int,
+        y: Int,
+        z: Int,
+        packingFraction: Float,
+        dipoleRadius: Float
+    ) : super(x * y * z) {
         a = 2f * dipoleRadius / packingFraction
         m = 0.0f
         xCount = x
@@ -83,7 +72,6 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
         this.dipoleRadius = dipoleRadius
         this.packingFraction = packingFraction
         populateSequential()
-        mUpdateListener = updateListener
     }
 
     /**
@@ -103,13 +91,6 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
                 }
             }
         }
-    }
-
-    //**********addDipoleAt()**********
-    // Add dipole at the specified coords to the end of the current particle assembly
-    fun addDipoleAt(x: Int, y: Int, z: Int) {
-        val dipolefTemp = DipoleSphere3f(x * a, y * a, z * a) // newDipole is a temp Dipole object to be added to ArrayList
-        this.add(dipolefTemp)
     }
 
     //**********addDipoleAt()**********
@@ -142,28 +123,29 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
         for (i in 0 until cellCount) {
             // Fixate a single dipole up or down.
             this[i].m = fixateDipole(i, hApplied)
-            // Notify listener
-            mUpdateListener?.onDipoleFixated(this[i])
             m += this[i].m
         }
-        // TODO: Use this Listener for both MHCurve and individual dipole charts so it will never be null.
-        mUpdateListener?.onRecordingDone(this)
         return m / cellCount
     }
 
     /**
-     * Fixate the magnetic orientation for a single particle
+     * Fixate the magnetic orientation for a single particle.
+     *
+     * We randomly chose +/- [SATURATION_M] if [netBField] == 0; the most common case is when we calculate the first
+     * dipole for an applied field of 0.0F.
+     * TODO: calculate the proper return value rather than use the arbitrarily chosen [SATURATION_M]
+     *
+     * @return the recorded magnetic field for the [DipoleSphere3f] at index [i]
      */
     private fun fixateDipole(i: Int, appliedHField: Float): Float {
-        val fixatedM: Float
         val netMField = calculateNetMField(i)
         val netBField = netMField + appliedHField
-        fixatedM = if (netBField > 0.0f) {
-            MonteCarloHysteresisPanel.SATURATION_M
-        } else {
-            -MonteCarloHysteresisPanel.SATURATION_M
+        netInteractionFields[i] = netMField
+        return when {
+            netBField > 0.0f -> SATURATION_M
+            netBField < 0.0f -> -SATURATION_M
+            else -> if (Random.nextBoolean()) SATURATION_M else -SATURATION_M
         }
-        return fixatedM
     }
 
     /**
@@ -172,8 +154,8 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
      * @param i - the index of the dipole where we calculate M, the net magnetic remanence field
      * @return - the net magnetic remanence field, M, at dipole with index "i"
      */
-    private fun calculateNetMField(i: Int): Float {
-        var netMField = 0f
+    private fun calculateNetMField(i: Int): InteractionField {
+        var netMField: InteractionField = 0f
 //        runBlocking { // this: CoroutineScope
 //            launch { // launch a new coroutine and continue
 //                delay(1000L) // non-blocking delay for 1 second (default time unit is ms)
@@ -195,23 +177,6 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
         return netMField
     }
 
-    /**
-     * TODO: implement using ThreadMessager and ChunkMaker
-     * @param i - the index of the dipole where we calculate M, the net magnetic remanence field
-     * @return - the net magnetic remanence field, M, at dipole with index "i"
-     */
-    private fun calculateNetMFieldMultiThreaded(i: Int): Float {
-        var netMField = 0f
-        for (j in 0 until i) {
-            netMField += this[i].getHInteraction(this[j])
-        }
-        return netMField
-    }
-
-    private suspend fun calculateH(dipole: DipoleSphere3f, otherDipole: DipoleSphere3f?) =
-            dipole.getHInteraction(otherDipole)
-
-    //**********calculateNetM()**********
     //** Calculate the net magnetism, M, for the entire particle assembly **
     fun calculateNetM(): Float {
         m = 0.0f
@@ -226,9 +191,9 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
 
     companion object {
         val empty = MagneticMedia()
-        fun create(geometry: MediaGeometry, listener: MagneticMediaListener?): MagneticMedia {
+        fun create(geometry: MediaGeometry): MagneticMedia {
             return with(geometry) {
-                MagneticMedia(xCount, yCount, zCount, packingFraction, dipoleRadius, listener).also {
+                MagneticMedia(xCount, yCount, zCount, packingFraction, dipoleRadius).also {
                     it.randomizeLattice()
                 }
             }

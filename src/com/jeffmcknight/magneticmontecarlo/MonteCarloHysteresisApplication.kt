@@ -4,6 +4,8 @@
 package com.jeffmcknight.magneticmontecarlo
 
 import com.jeffmcknight.magneticmontecarlo.MonteCarloHysteresisPanel.Companion.RUN_SIMULATION
+import com.jeffmcknight.magneticmontecarlo.interactor.InteractionFieldInteractor
+import com.jeffmcknight.magneticmontecarlo.interactor.RecordedFieldInteractor
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
 import com.jeffmcknight.magneticmontecarlo.model.Repository
 import info.monitorenter.gui.chart.io.FileFilterExtensions
@@ -24,6 +26,7 @@ import kotlin.system.exitProcess
  * TODO: get the coroutine scopes right; GlobalScope works, but the linter is not happy; maybe [MainScope]?
  * TODO: add a [JFileChooser] to select files to export [DipoleSphere3f] lists
  * TODO: handle [HeadlessException]s?
+ * TODO: move all dependencies to a provider class
  *
  * @author jeffmcknight
  */
@@ -31,7 +34,10 @@ class MonteCarloHysteresisApplication : JFrame() {
 
     private val coroutineScope = GlobalScope
     private val repo by lazy { Repository(coroutineScope) }
-    private val viewModel: ViewModel by lazy { ViewModel(coroutineScope, repo) }
+    private val interactionFieldInteractor by lazy { InteractionFieldInteractor(repo) }
+    private val recordedFieldInteractor by lazy { RecordedFieldInteractor(repo) }
+    private val viewModel by lazy { ViewModel(coroutineScope, repo, recordedFieldInteractor, interactionFieldInteractor) }
+
     private val mPrimaryModifierKey: Int
     private val mOperatingSystem: OperatingSystem
     /** the File Menu */

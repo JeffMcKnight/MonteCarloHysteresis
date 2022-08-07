@@ -11,7 +11,7 @@ class Repository(private val coroutineScope: CoroutineScope) {
 
     fun record(geometry: MediaGeometry, appliedField: AppliedField) {
         coroutineScope.launch {
-            val magneticMedia = MagneticMedia.create(geometry, null)
+            val magneticMedia = MagneticMedia.create(geometry)
             magneticMedia.recordWithAcBias(appliedField)
             recordingDoneFlo.emit(RecordingResult(magneticMedia, appliedField))
         }
