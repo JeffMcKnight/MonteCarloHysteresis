@@ -2,6 +2,8 @@ package com.jeffmcknight.magneticmontecarlo
 
 import com.jeffmcknight.magneticmontecarlo.ChartType.*
 import com.jeffmcknight.magneticmontecarlo.model.AppliedField
+import com.jeffmcknight.magneticmontecarlo.model.ChartData
+import com.jeffmcknight.magneticmontecarlo.model.ChartData.*
 import info.monitorenter.gui.chart.Chart2D
 import info.monitorenter.gui.chart.traces.Trace2DSimple
 import info.monitorenter.gui.chart.traces.painters.TracePainterDisc
@@ -92,7 +94,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
 
     /**
      * The Chart that we draw all our traces onto.
-     * TODO: rename or create another chart to display data from [ViewModel.dipoleAverageFlo] and
+     * TODO: rename or create another chart to display data from [ViewModel.recordedAverageTraceFlo] and
      * [ViewModel.recordSingleFlo]
      */
     private val bhChart = Chart2D()
@@ -102,11 +104,9 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     private val mChartPanel: JPanel
     private val mControlsPanel: JPanel
     private var traceHue = 0f
-    private var mActiveChart: ChartType
 
     init {
         CurveFamily.getDefaultRecordPoints()
-        mActiveChart = MH_CURVE
         // Create a frame.
         this.layout = BoxLayout(this, BoxLayout.X_AXIS)
         mControlsPanel = JPanel()
@@ -119,53 +119,25 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         showChart(mChartPanel)
 
         // FIXME: is this the right scope/way to collect items emitted by recordingDoneFlo ?
-        // FIXME: make a sealed class and do this routing in the ViewModel
+        // TODO: can we just update traces rather than removing and replacing all of them
         coroutineScope.launch {
-            viewModel.recordSingleFlo.collect { magneticMedia ->
-                when (mActiveChart) {
-                    MH_CURVE_POINT -> {
+            viewModel.chartFlo.collect { chart: ChartData ->
+                when (chart) {
+                    is BHCurve -> addMhPoints(chart.curve)
+                    is InteractionChart -> {
                         bhChart.removeAllTraces()
-                        showDipoleTraces(magneticMedia)
+                        chart.interactionTraces.forEach { showAsTrace(it) }
                     }
-                    DIPOLE_AVERAGES, INTERACTION_AVERAGES, MH_CURVE -> {}
-                }
-            }
-        }
-        /**
-         * TODO: can we just update traces rather than removing and replacing all of them
-         */
-        coroutineScope.launch {
-            viewModel.dipoleAverageFlo.collect { traceDataList ->
-                when (mActiveChart) {
-                    DIPOLE_AVERAGES -> {
+                    is RecordedFluxChart -> {
                         bhChart.removeAllTraces()
-                        val titleXAxis = "n [Dipole rank by coercivity]"
-                        traceDataList.forEach { averages ->
-                            val traceName = "Averaged Dipoles\t-- Applied Field: ${averages.appliedField}\t-- Recording Passes: ${averages.count}"
-                            val traceColor = averages.color
-                            val pointList = averages.dipoles.mapIndexed { index: Int, h: Float -> Point2d(index.toDouble(), h.toDouble()) }
-                            showAsTrace(TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]"))
-                        }
+                        chart.recordedFieldTraces.forEach { showAsTrace(it) }
                     }
-                    INTERACTION_AVERAGES, MH_CURVE_POINT, MH_CURVE -> {}
-                }
-            }
-        }
-        coroutineScope.launch {
-            viewModel.curveFamilyFlo.collect {
-                addMhPoints(it)
-            }
-        }
-        coroutineScope.launch {
-            viewModel.interactionAverageTraceFlo.collect { traces: List<TraceSpec> ->
-                when (mActiveChart) {
-                    INTERACTION_AVERAGES -> {
+                    is SingleRecording -> {
                         bhChart.removeAllTraces()
-                        traces.forEach { showAsTrace(it) }
-                    }
-                    DIPOLE_AVERAGES, MH_CURVE_POINT, MH_CURVE -> {}
-                }
+                        showDipoleTraces(chart.magneticMedia)
 
+                    }
+                }
             }
         }
     }
@@ -187,24 +159,21 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         val dipoleRadioButton = JRadioButton().apply {
             text = DIPOLE_BUTTON_TEXT
             addActionListener {
-                bhChart.removeAllTraces()
-                mActiveChart = MH_CURVE_POINT
+                viewModel.activeChart = MH_CURVE_POINT
             }
         }
 
         val averagedDipoleRadioButton = JRadioButton().apply {
             text = AVERAGED_DIPOLE_BUTTON_TEXT
             addActionListener {
-                bhChart.removeAllTraces()
-                mActiveChart = DIPOLE_AVERAGES
+                viewModel.activeChart = DIPOLE_AVERAGES
             }
         }
 
         val averagedInteractionsRadioButton = JRadioButton().apply {
             text = AVERAGED_INTERACTIONS_BUTTON_TEXT
             addActionListener {
-                bhChart.removeAllTraces()
-                mActiveChart = INTERACTION_AVERAGES
+                viewModel.activeChart = INTERACTION_AVERAGES
             }
         }
 
@@ -313,7 +282,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     private fun chartDescription(fastAveragePeriod: Int): String {
         return when (fastAveragePeriod) {
             0 -> "Cumulative Average"
-            -1 -> "Total (Normalized to " + SATURATION_M + ")"
+            -1 -> "Total (Normalized to $SATURATION_M)"
             else -> "Moving Average over $fastAveragePeriod dipoles"
         }
     }
@@ -324,6 +293,8 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
      * @param fastAveragePeriod
      * @param magneticMedia TODO
      * @return
+     *
+     * TODO: move this to the ViewModel
      */
     private fun buildTraceName(title: String,
                                count: Int,
@@ -364,14 +335,13 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
      * Show [CurveFamily] data points if we have already run a simulation.
      */
     private fun showMhCurveChart() {
-        mActiveChart = MH_CURVE
+        viewModel.activeChart = MH_CURVE
         mAppliedFieldRangeBox.name = APPLIED_FIELD_RANGE_LABEL
         bhChart.axisX.axisTitle.title = "H [nWb]"
         bhChart.removeAllTraces()
         addMhPoints(viewModel.curveFamilyFlo.value)
     }
 
-    // *************** buildComboBoxPanel() ***************
     /**
      * @param initialComboIndex
      * @param label TODO
@@ -407,11 +377,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
      */
     fun runSimulation(actionCommand: String) {
         if (actionCommand == RUN_SIMULATION) {
-            when (mActiveChart) {
-                DIPOLE_AVERAGES, INTERACTION_AVERAGES -> viewModel.recordMultiple()
-                MH_CURVE -> viewModel.recordBhCurve()
-                MH_CURVE_POINT -> viewModel.recordSingle()
-            }
+            viewModel.runSimulation()
         }
     }
 

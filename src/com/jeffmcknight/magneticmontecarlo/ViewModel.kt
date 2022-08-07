@@ -1,13 +1,13 @@
 package com.jeffmcknight.magneticmontecarlo
 
+import com.jeffmcknight.magneticmontecarlo.ChartType.*
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.Companion.empty
 import com.jeffmcknight.magneticmontecarlo.interactor.InteractionFieldInteractor
 import com.jeffmcknight.magneticmontecarlo.interactor.RecordedFieldInteractor
 import com.jeffmcknight.magneticmontecarlo.model.*
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.awt.Color
 import java.awt.Color.*
@@ -25,10 +25,8 @@ class ViewModel(
     interactionFieldInteractor: InteractionFieldInteractor
 ) {
 
-    private var mediaGeometry = MediaGeometry()
     val curveFamilyFlo = MutableStateFlow(CurveFamily(0, empty.geometry, 0F))
     val recordSingleFlo: Flow<MagneticMedia> = repo.recordingDoneFlo.map { it.magneticMedia }
-
     var recordCount: Int = 1
 
     /**
@@ -36,11 +34,14 @@ class ViewModel(
      * TODO: convert to MutableStateFlow
      */
     var appliedField: AppliedField = 0.0f
+    var activeChart: ChartType = MH_CURVE
+
+    private var mediaGeometry = MediaGeometry()
 
     /**
      * Add UI-specific data
      */
-    val interactionAverageTraceFlo: Flow<List<TraceSpec>> =
+    private val interactionAverageTraceFlo: Flow<List<TraceSpec>> =
         interactionFieldInteractor.interactionAverageFlo.map { traceDataList: List<InteractionAverages> ->
             traceDataList.map { averages: InteractionAverages ->
                 val titleXAxis = "n [Dipole rank by coercivity]"
@@ -50,37 +51,62 @@ class ViewModel(
                 val pointList = averages.averageInteractionFields.mapIndexed { index: Int, h: InteractionField ->
                     Point2d(index.toDouble(), h.toDouble())
                 }
+                TraceSpec(traceName, titleXAxis, traceColor, pointList, "Interaction Field [nWb/m]")
+            }
+        }
+
+    /**
+     * Add UI-specific data
+     */
+    private val recordedAverageTraceFlo: Flow<List<TraceSpec>> =
+        recordedFieldInteractor.dipoleAverageFlo.map { traceDataList: List<DipoleAverages> ->
+            traceDataList.map { averages: DipoleAverages ->
+                val titleXAxis = "n [Dipole rank by coercivity]"
+                val traceName = "Averaged Dipoles\t-- Applied Field: ${averages.appliedField}\t-- Recording Passes: ${averages.count}"
+                val traceColor = averages.appliedField.toColor()
+                val pointList = averages.dipoles.mapIndexed { index: Int, h: RecordedField ->
+                    Point2d(index.toDouble(), h.toDouble())
+                }
                 TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]")
             }
         }
 
+    /**
+     * Merge all the [Flow]s together and filter by the [activeChart] in order to respect the radio button selection.
+     * TODO: should we filter further upstream so we're not doing so many calculations every time the
+     *          Interactors emit? Or maybe it's worth the extra compute so we can switch between charts
+     *          while the simulations are running?
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val chartFlo: Flow<ChartData> = merge(
+        recordedAverageTraceFlo.filter { activeChart == DIPOLE_AVERAGES }.map { ChartData.RecordedFluxChart(it) },
+        interactionAverageTraceFlo.filter { activeChart == INTERACTION_AVERAGES }.map { ChartData.InteractionChart(it) },
+        recordSingleFlo.filter { activeChart == MH_CURVE_POINT }.map { ChartData.SingleRecording(it) },
+        curveFamilyFlo.filter { activeChart == MH_CURVE }.map { ChartData.BHCurve(it) }
+    )
 
     /**
-     * Emits a list of [DipoleAverages]
+     * Run a recording simulation as specified by [activeChart]
      */
-    val dipoleAverageFlo: Flow<List<DipoleAverages>> =
-        recordedFieldInteractor.dipoleAccumulatorFlo.map { accumulator: DipoleAccumulator ->
-            accumulator.runningTotals.map { entry: Map.Entry<AppliedField, RunningTotal> ->
-                DipoleAverages(
-                    entry.value.dipoleTotalList.map { recordedField -> recordedField / entry.value.count },
-                    entry.value.count,
-                    entry.key,
-                    entry.key.toColor()
-                )
-            }
+    fun runSimulation() {
+        when (activeChart) {
+            DIPOLE_AVERAGES, INTERACTION_AVERAGES -> recordMultiple()
+            MH_CURVE -> recordBhCurve()
+            MH_CURVE_POINT -> recordSingle()
         }
+    }
 
     /**
      * Perform a single recording upon a [MagneticMedia]
      */
-    fun recordSingle() {
+    private fun recordSingle() {
         repo.record(mediaGeometry, appliedField)
     }
 
     /**
      * Perform [recordCount] recordings.
      */
-    fun recordMultiple() {
+    private fun recordMultiple() {
         repeat(recordCount) {
             repo.record(mediaGeometry, appliedField)
         }
@@ -91,7 +117,7 @@ class ViewModel(
      * recording.
      * TODO: refactor to use repo
      */
-    fun recordBhCurve() {
+    private fun recordBhCurve() {
         coroutineScope.launch {
             CurveFamily(recordCount, mediaGeometry, appliedField).also {
                 it.recordMHCurves()
