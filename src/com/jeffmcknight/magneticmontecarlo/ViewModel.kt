@@ -43,13 +43,13 @@ class ViewModel(
      */
     private val interactionAverageTraceFlo: Flow<List<TraceSpec>> =
         interactionFieldInteractor.interactionAverageFlo.map { traceDataList: List<InteractionAverages> ->
-            traceDataList.map { averages: InteractionAverages ->
+            traceDataList.mapIndexed { index: Int, averages: InteractionAverages ->
                 val titleXAxis = "n [Dipole rank by coercivity]"
                 val traceName =
                     "Averaged Interaction at Dipoles\t-- Applied Field: ${averages.appliedField}\t-- Recording Passes: ${averages.count}"
-                val traceColor = averages.appliedField.toColor()
-                val pointList = averages.averageInteractionFields.mapIndexed { index: Int, h: InteractionField ->
-                    Point2d(index.toDouble(), h.toDouble())
+                val traceColor = index.toColor()
+                val pointList = averages.averageInteractionFields.mapIndexed { idx: Int, h: InteractionField ->
+                    Point2d(idx.toDouble(), h.toDouble())
                 }
                 TraceSpec(traceName, titleXAxis, traceColor, pointList, "Interaction Field [nWb/m]")
             }
@@ -60,12 +60,12 @@ class ViewModel(
      */
     private val recordedAverageTraceFlo: Flow<List<TraceSpec>> =
         recordedFieldInteractor.dipoleAverageFlo.map { traceDataList: List<DipoleAverages> ->
-            traceDataList.map { averages: DipoleAverages ->
+            traceDataList.mapIndexed { index: Int, averages: DipoleAverages ->
                 val titleXAxis = "n [Dipole rank by coercivity]"
                 val traceName = "Averaged Dipoles\t-- Applied Field: ${averages.appliedField}\t-- Recording Passes: ${averages.count}"
-                val traceColor = averages.appliedField.toColor()
-                val pointList = averages.dipoles.mapIndexed { index: Int, h: RecordedField ->
-                    Point2d(index.toDouble(), h.toDouble())
+                val traceColor = index.toColor()
+                val pointList = averages.dipoles.mapIndexed { idx: Int, h: RecordedField ->
+                    Point2d(idx.toDouble(), h.toDouble())
                 }
                 TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]")
             }
@@ -149,10 +149,10 @@ class ViewModel(
 }
 
 /**
- * TODO: take the divisor from the max [AppliedField]
+ * Select a [Color] from the [colorList]
  */
-private fun AppliedField.toColor(): Color {
-    return colorList[((this.absoluteValue / 5) % 10 ).toInt()]
+private fun Int.toColor(): Color {
+    return colorList[(this.absoluteValue % colorList.size )]
 }
 
 /** Copied from javafx.scene.paint.Color */
