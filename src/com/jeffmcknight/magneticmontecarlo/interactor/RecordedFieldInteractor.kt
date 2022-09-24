@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.scan
 class RecordedFieldInteractor(repo: Repository) {
 
     /**
-     * Sums up all the dipole value emitted since the last [MediaGeometry] change.  We aggregate the lists of
+     * Sums up all the dipole values emitted since the last [MediaGeometry] change.  We aggregate the lists of
      * [RecordedField] and organize by the [AppliedField] (using it as the key to a mutable map).
      * We use this intermediate result to determine the average dipole value over the all accumulated recordings.
      */

@@ -4,6 +4,7 @@ import com.jeffmcknight.magneticmontecarlo.ChartType.*
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.Companion.empty
 import com.jeffmcknight.magneticmontecarlo.interactor.InteractionFieldInteractor
 import com.jeffmcknight.magneticmontecarlo.interactor.RecordedFieldInteractor
+import com.jeffmcknight.magneticmontecarlo.interactor.SaturationInteractor
 import com.jeffmcknight.magneticmontecarlo.model.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,6 +22,7 @@ import kotlin.math.absoluteValue
 class ViewModel(
     private val coroutineScope: CoroutineScope,
     private val repo: Repository,
+    saturationInteractor: SaturationInteractor,
     recordedFieldInteractor: RecordedFieldInteractor,
     interactionFieldInteractor: InteractionFieldInteractor
 ) {

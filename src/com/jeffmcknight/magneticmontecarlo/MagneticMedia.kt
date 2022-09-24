@@ -1,8 +1,10 @@
 package com.jeffmcknight.magneticmontecarlo
 
 import com.jeffmcknight.magneticmontecarlo.MonteCarloHysteresisPanel.Companion.SATURATION_M
+import com.jeffmcknight.magneticmontecarlo.model.AppliedField
 import com.jeffmcknight.magneticmontecarlo.model.InteractionField
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
+import com.jeffmcknight.magneticmontecarlo.model.RecordedField
 import javax.vecmath.Point3f
 import kotlin.random.Random
 
@@ -11,6 +13,9 @@ import kotlin.random.Random
  * Container for dipole elements
  */
 class MagneticMedia : ArrayList<DipoleSphere3f> {
+    val saturationFlux: RecordedField
+        get() = m
+
     /**
      * Intermediate results. This is a list of the [InteractionField]s that we calculated at each
      * [DipoleSphere3f] as we determined whether that dipole would fixate up or down.
@@ -118,7 +123,7 @@ class MagneticMedia : ArrayList<DipoleSphere3f> {
      * @param hApplied
      * @return
      */
-    fun recordWithAcBias(hApplied: Float): Float {
+    fun recordWithAcBias(hApplied: AppliedField): RecordedField {
         var m = 0.0f
         for (i in 0 until cellCount) {
             // Fixate a single dipole up or down.

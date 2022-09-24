@@ -6,6 +6,7 @@ package com.jeffmcknight.magneticmontecarlo
 import com.jeffmcknight.magneticmontecarlo.MonteCarloHysteresisPanel.Companion.RUN_SIMULATION
 import com.jeffmcknight.magneticmontecarlo.interactor.InteractionFieldInteractor
 import com.jeffmcknight.magneticmontecarlo.interactor.RecordedFieldInteractor
+import com.jeffmcknight.magneticmontecarlo.interactor.SaturationInteractor
 import com.jeffmcknight.magneticmontecarlo.model.MediaGeometry
 import com.jeffmcknight.magneticmontecarlo.model.Repository
 import info.monitorenter.gui.chart.io.FileFilterExtensions
@@ -36,7 +37,13 @@ class MonteCarloHysteresisApplication : JFrame() {
     private val repo by lazy { Repository(coroutineScope) }
     private val interactionFieldInteractor by lazy { InteractionFieldInteractor(repo) }
     private val recordedFieldInteractor by lazy { RecordedFieldInteractor(repo) }
-    private val viewModel by lazy { ViewModel(coroutineScope, repo, recordedFieldInteractor, interactionFieldInteractor) }
+    private val saturationInteractor by lazy { SaturationInteractor(repo) }
+    private val viewModel by lazy { ViewModel(
+        coroutineScope,
+        repo,
+        saturationInteractor,
+        recordedFieldInteractor,
+        interactionFieldInteractor) }
 
     private val mPrimaryModifierKey: Int
     private val mOperatingSystem: OperatingSystem

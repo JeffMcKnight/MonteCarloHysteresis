@@ -458,7 +458,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         const val AVERAGED_DIPOLE_BUTTON_TEXT = "Show Averaged Dipoles"
         const val AVERAGED_INTERACTIONS_BUTTON_TEXT = "Show Averaged Interaction Fields"
         const val CURVE_BUTTON_TEXT = "Show M-H Curve"
-        const val DIPOLE_BUTTON_TEXT = "Show Dipole"
+        const val DIPOLE_BUTTON_TEXT = "Show Single Dipole"
         internal const val RUN_SIMULATION = "run_simulation"
         val LATTICE_SIZES = arrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
         val RECORDING_PASS_COUNT = arrayOf(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192)
