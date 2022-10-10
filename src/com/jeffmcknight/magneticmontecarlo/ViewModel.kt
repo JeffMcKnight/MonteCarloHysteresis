@@ -47,8 +47,8 @@ class ViewModel(
                 val traceName =
                     "Averaged Interaction at Dipoles\t-- Applied Field: ${averages.appliedField}\t-- Recording Passes: ${averages.count}"
                 val traceColor = averages.appliedField.toColor()
-                val pointList = averages.averageInteractionFields.mapIndexed { index: Int, h: InteractionField ->
-                    Point2d(index.toDouble(), h.toDouble())
+                val pointList = averages.averageInteractionFields.mapIndexed {
+                        index: Int, h: InteractionField -> Point2d(index.toDouble(), h.toDouble())
                 }
                 TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]")
             }
@@ -56,7 +56,8 @@ class ViewModel(
 
 
     /**
-     * Emits a list of [DipoleAverages]
+     * Emits a list of [DipoleAverages]; that is to say, a list of the average value of each dipole
+     * averaged over a series of recording passes.
      */
     val dipoleAverageFlo: Flow<List<DipoleAverages>> =
         recordedFieldInteractor.dipoleAccumulatorFlo.map { accumulator: DipoleAccumulator ->
