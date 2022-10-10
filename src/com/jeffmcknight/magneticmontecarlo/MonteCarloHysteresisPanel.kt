@@ -2,6 +2,7 @@ package com.jeffmcknight.magneticmontecarlo
 
 import com.jeffmcknight.magneticmontecarlo.ChartType.*
 import com.jeffmcknight.magneticmontecarlo.model.AppliedField
+import com.jeffmcknight.magneticmontecarlo.model.DipoleAverages
 import info.monitorenter.gui.chart.Chart2D
 import info.monitorenter.gui.chart.traces.Trace2DSimple
 import info.monitorenter.gui.chart.traces.painters.TracePainterDisc
@@ -28,7 +29,8 @@ import javax.vecmath.Point2d
  * TODO: reduce chart jank (throttle Flow emissions?)
  *
  */
-class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope: CoroutineScope) : JPanel(), ActionListener {
+class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope: CoroutineScope) :
+    JPanel(), ActionListener {
 
     /**
      * A B-H curve trace with data from a set of recorded [MagneticMedia]
@@ -91,32 +93,86 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     }
 
     /**
+     * The [Chart2D] that displays the value of each dipole, averaged across multiple recordings.
+     */
+    private val averagedIndividualDipolesChart by lazy {
+        Chart2D().apply {
+            // Set chart axis titles
+            axisX.axisTitle.title = "R [Dipole ranked by coercivity]"
+            axisY.axisTitle.title = "B, Individual Dipole Values, Averaged [nWb]"
+
+            // Show chart grids for both x and y axis
+            axisX.isPaintGrid = true
+            axisY.isPaintGrid = true
+            isVisible = false
+        }
+    }
+
+    /**
      * The Chart that we draw all our traces onto.
      * TODO: rename or create another chart to display data from [ViewModel.dipoleAverageFlo] and
      * [ViewModel.recordSingleFlo]
      */
-    private val bhChart = Chart2D()
+    private val bhChart by lazy {
+        Chart2D().apply {
+            // Set chart axis titles
+            axisX.axisTitle.title = "H [nWb]"
+            axisY.axisTitle.title = "B [nWb]"
+
+            // Show chart grids for both x and y axis
+            axisX.isPaintGrid = true
+            axisY.isPaintGrid = true
+        }
+    }
+
+    /**
+     * The [Chart2D] to display the interaction field at individual dipoles as the recording
+     * simulation is in progress.
+     */
+    private val interactionFieldChart by lazy {
+        Chart2D().apply {
+            isVisible = false
+            // Set chart axis titles
+            axisX.axisTitle.title = "R [Dipole ranked by coercivity]"
+            axisY.axisTitle.title = "Interaction Field at Dipole N (H) [nWb]"
+
+            // Show chart grids for both x and y axis
+            axisX.isPaintGrid = true
+            axisY.isPaintGrid = true
+        }
+    }
 
     // Create a frame.
     private var mCurveTraceCount = 0
+    /** Contains the various charts that we show (B-H curve, individual dipole values, etc) */
     private val mChartPanel: JPanel
+    /** Contains all the app controls (radio buttons, run button, etc) */
     private val mControlsPanel: JPanel
     private var traceHue = 0f
-    private var mActiveChart: ChartType
+    private var mActiveChart = MH_CURVE_POINT
 
+    /**
+     * Create UI, and set up Flow collectors
+     * TODO:
+     */
     init {
-        CurveFamily.getDefaultRecordPoints()
-        mActiveChart = MH_CURVE
         // Create a frame.
         this.layout = BoxLayout(this, BoxLayout.X_AXIS)
-        mControlsPanel = JPanel()
-        mControlsPanel.layout = BoxLayout(mControlsPanel, BoxLayout.PAGE_AXIS)
+        mControlsPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.PAGE_AXIS)
+            setUpControlsPanel(this)
+        }
+        mChartPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.X_AXIS)
+            minimumSize = Dimension(800, 600)
+            setLocation(0, 0)
+        }.also {
+            it.add(bhChart)
+            it.add(averagedIndividualDipolesChart)
+            it.add(interactionFieldChart)
+        }
         this.add(mControlsPanel)
-        mChartPanel = JPanel()
-        mChartPanel.layout = BoxLayout(mChartPanel, BoxLayout.X_AXIS)
         this.add(mChartPanel)
-        buildRunConfigPanel()
-        showChart(mChartPanel)
 
         // FIXME: is this the right scope/way to collect items emitted by recordingDoneFlo ?
         // FIXME: make a sealed class and do this routing in the ViewModel
@@ -138,13 +194,16 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             viewModel.dipoleAverageFlo.collect { traceDataList ->
                 when (mActiveChart) {
                     DIPOLE_AVERAGES -> {
-                        bhChart.removeAllTraces()
+                        averagedIndividualDipolesChart.removeAllTraces()
                         val titleXAxis = "n [Dipole rank by coercivity]"
-                        traceDataList.forEach { averages ->
+                        traceDataList.forEach { averages: DipoleAverages ->
                             val traceName = "Averaged Dipoles\t-- Applied Field: ${averages.appliedField}\t-- Recording Passes: ${averages.count}"
                             val traceColor = averages.color
                             val pointList = averages.dipoles.mapIndexed { index: Int, h: Float -> Point2d(index.toDouble(), h.toDouble()) }
-                            showAsTrace(TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]"))
+                            showAsTrace(
+                                TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]"),
+                                averagedIndividualDipolesChart
+                            )
                         }
                     }
                     INTERACTION_AVERAGES, MH_CURVE_POINT, MH_CURVE -> {}
@@ -153,15 +212,15 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         }
         coroutineScope.launch {
             viewModel.curveFamilyFlo.collect {
-                addMhPoints(it)
+                addMhPoints(it, bhChart)
             }
         }
         coroutineScope.launch {
             viewModel.interactionAverageTraceFlo.collect { traces: List<TraceSpec> ->
                 when (mActiveChart) {
                     INTERACTION_AVERAGES -> {
-                        bhChart.removeAllTraces()
-                        traces.forEach { showAsTrace(it) }
+                        interactionFieldChart.removeAllTraces()
+                        traces.forEach { showAsTrace(it, interactionFieldChart) }
                     }
                     DIPOLE_AVERAGES, MH_CURVE_POINT, MH_CURVE -> {}
                 }
@@ -171,10 +230,10 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     }
 
     /**
-     * Build JPanel on left side of JFrame that contains
-     * labeled JComboBoxes to set simulation parameters
+     * Build JPanel on left side of JFrame that contains labeled JComboBoxes to set simulation
+     * parameters
      */
-    private fun buildRunConfigPanel() {
+    private fun setUpControlsPanel(controlPanel: JPanel) {
         val initialComboIndex = 8
 
         // Create combo boxes for lattice parameters
@@ -188,6 +247,9 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             text = DIPOLE_BUTTON_TEXT
             addActionListener {
                 bhChart.removeAllTraces()
+                averagedIndividualDipolesChart.isVisible = false
+                bhChart.isVisible = true
+                interactionFieldChart.isVisible = false
                 mActiveChart = MH_CURVE_POINT
             }
         }
@@ -195,7 +257,9 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         val averagedDipoleRadioButton = JRadioButton().apply {
             text = AVERAGED_DIPOLE_BUTTON_TEXT
             addActionListener {
-                bhChart.removeAllTraces()
+                averagedIndividualDipolesChart.isVisible = true
+                bhChart.isVisible = false
+                interactionFieldChart.isVisible = false
                 mActiveChart = DIPOLE_AVERAGES
             }
         }
@@ -204,6 +268,9 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             text = AVERAGED_INTERACTIONS_BUTTON_TEXT
             addActionListener {
                 bhChart.removeAllTraces()
+                averagedIndividualDipolesChart.isVisible = false
+                bhChart.isVisible = false
+                interactionFieldChart.isVisible = true
                 mActiveChart = INTERACTION_AVERAGES
             }
         }
@@ -215,6 +282,12 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             add(dipoleRadioButton)
             add(averagedDipoleRadioButton)
             add(averagedInteractionsRadioButton)
+            when(mActiveChart) {
+                DIPOLE_AVERAGES -> setSelected(averagedDipoleRadioButton.model, true)
+                INTERACTION_AVERAGES -> setSelected(averagedInteractionsRadioButton.model, true)
+                MH_CURVE_POINT -> setSelected(dipoleRadioButton.model, true)
+                MH_CURVE -> setSelected(curveRadioButton.model, true)
+            }
         }
 
         // Create combo box panels for lattice dimensions
@@ -224,9 +297,28 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         val dipoleRadiusPanel = buildComboBoxPanel(3, DIPOLE_RADIUS_LABEL, dipoleRadiusList)
         val packingFractionPanel = buildComboBoxPanel(1, PACKING_FRACTION_LABEL, mPackingFractionBox)
         val recordCountPanel = buildComboBoxPanel(INITIAL_RECORD_COUNT_INDEX, RECORDING_PASSES_LABEL, mRecordCountBox)
-        val mAppliedFieldRangePanel = buildComboBoxPanel(DEFAULT_APPLIED_FIELD_ITEM, APPLIED_FIELD_RANGE_LABEL, mAppliedFieldRangeBox)
+        val mAppliedFieldRangePanel = buildComboBoxPanel(
+            DEFAULT_APPLIED_FIELD_ITEM,
+            APPLIED_FIELD_RANGE_LABEL,
+            mAppliedFieldRangeBox
+        )
+        // Create Run button and host layout (for positioning?)
+        val buttonRunPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.X_AXIS)
+            val buttonRun: JButton = JButton("Run").apply {
+                verticalTextPosition = AbstractButton.CENTER
+                horizontalTextPosition = AbstractButton.CENTER //aka LEFT, for left-to-right locales
+                mnemonic = KeyEvent.VK_R
+                actionCommand = RUN_SIMULATION
+                addActionListener(this@MonteCarloHysteresisPanel)
+                toolTipText = "Click to start simulation"
+                alignmentX = RIGHT_ALIGNMENT
+            }
+            add(buttonRun) // add button to panel
+            alignmentX = LEFT_ALIGNMENT
+        }
 
-        with(mControlsPanel) {
+        with(controlPanel) {
             // Add combo box panels for lattice dimensions
             add(xComboBoxPanel)
             add(yComboBoxPanel)
@@ -245,29 +337,12 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             add(dipoleRadioButton)
             add(averagedDipoleRadioButton)
             add(averagedInteractionsRadioButton)
+            // Add vertical space between radio buttons and run JButton
+            add(Box.createRigidArea(Dimension(0, 20)))
+            // Add run JButton
+            add(buttonRunPanel)
+            add(Box.createVerticalStrut(300))
         }
-
-        // Add vertical space between radio buttons and run JButton
-        mControlsPanel.add(Box.createRigidArea(Dimension(0, 20)))
-
-        // Add run JButton
-        val buttonRun: JButton = JButton("Run").apply {
-            verticalTextPosition = AbstractButton.CENTER
-            horizontalTextPosition = AbstractButton.CENTER //aka LEFT, for left-to-right locales
-            mnemonic = KeyEvent.VK_R
-            actionCommand = RUN_SIMULATION
-            addActionListener(this@MonteCarloHysteresisPanel)
-            toolTipText = "Click to start simulation"
-            alignmentX = RIGHT_ALIGNMENT
-        }
-        //create panel for button
-        val buttonRunPanel = JPanel().apply {
-            layout = BoxLayout(this, BoxLayout.X_AXIS)
-            add(buttonRun) // add button to panel
-            alignmentX = LEFT_ALIGNMENT
-        }
-        mControlsPanel.add(buttonRunPanel)
-        mControlsPanel.add(Box.createVerticalStrut(300))
 
         // Add border padding around entire panel
         border = BorderFactory.createEmptyBorder(
@@ -275,7 +350,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 DEFAULT_BORDER_SPACE,
                 DEFAULT_BORDER_SPACE,
                 DEFAULT_BORDER_SPACE)
-        mControlsPanel.maximumSize = Dimension(200, 600)
+        controlPanel.maximumSize = Dimension(200, 600)
     }
 
     private fun showDipoleTraces(magneticMedia: MagneticMedia) {
@@ -368,7 +443,10 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         mAppliedFieldRangeBox.name = APPLIED_FIELD_RANGE_LABEL
         bhChart.axisX.axisTitle.title = "H [nWb]"
         bhChart.removeAllTraces()
-        addMhPoints(viewModel.curveFamilyFlo.value)
+        addMhPoints(viewModel.curveFamilyFlo.value, bhChart)
+        averagedIndividualDipolesChart.isVisible = false
+        interactionFieldChart.isVisible = false
+        bhChart.isVisible = true
     }
 
     // *************** buildComboBoxPanel() ***************
@@ -415,29 +493,13 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         }
     }
 
-    private fun showChart(panel: JPanel) {
-        // Set chart axis titles
-        bhChart.axisX.axisTitle.title = "H [nWb]"
-        bhChart.axisY.axisTitle.title = "B"
-
-        // Show chart grids for both x and y axis
-        bhChart.axisX.isPaintGrid = true
-        bhChart.axisY.isPaintGrid = true
-
-        // Make it visible:
-        // add the chart to the frame:
-        panel.add(bhChart)
-        panel.minimumSize = Dimension(800, 600)
-        panel.setLocation(0, 0)
-        panel.isVisible = true
-    }
-
     /**
      * Create a new [Trace2DSimple] and use it to add points from [chartCurves] to the chart.
      * TODO: find a better way to update the trace color (maybe a list of colors or something?)
      * @param chartCurves a set of B-H points that define a linear-ish recording.
+     * @param chart the [Chart2D] to add the [chartCurves] to
      */
-    private fun addMhPoints(chartCurves: CurveFamily) {
+    private fun addMhPoints(chartCurves: CurveFamily, chart: Chart2D) {
         // Increment the count and update the color
         // to display multiple traces on the same chart.
         mCurveTraceCount += 1
@@ -446,13 +508,16 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         val traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, chartCurves.magneticCube)
         val titleXAxis = "H, applied [nWb]"
         val pointList = chartCurves.getAverageMCurve().recordPoints.map { Point2d(it.h.toDouble(), it.m.toDouble()) }
-        showAsTrace(TraceSpec(traceName, titleXAxis, traceColor, pointList,"Recorded Flux [nWb/m]"))
+        showAsTrace(
+            TraceSpec(traceName, titleXAxis, traceColor, pointList,"Recorded Flux [nWb/m]"), chart
+        )
     }
 
     /**
-     * Show the data in [traceSpec] on [bhChart] as a [Trace2DSimple]
+     * Show the data in [traceSpec] on the [chart] as a [Trace2DSimple]
+     * @param chart the [Chart2D] to add the [Trace2DSimple]s to
      */
-    private fun showAsTrace(traceSpec: TraceSpec) {
+    private fun showAsTrace(traceSpec: TraceSpec, chart: Chart2D) {
         Trace2DSimple()
             .apply {
                 name = traceSpec.name
@@ -461,9 +526,11 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             }.also { trace ->
                 // Set trace properties (name, color, point shape to disc)
                 // Add the trace to the chart. This has to be done before adding points (deadlock prevention):
-                bhChart.addTrace(trace)
-                bhChart.axisX.axisTitle.title = traceSpec.titleXAxis
-                bhChart.axisY.axisTitle.title = traceSpec.titleYAxis
+                with(chart) {
+                    addTrace(trace)
+                    axisX.axisTitle.title = traceSpec.titleXAxis
+                    axisY.axisTitle.title = traceSpec.titleYAxis
+                }
                 // Add the recording points to the trace
                 traceSpec.pointList.forEach { point -> trace.addPoint(point.x, point.y) }
             }
