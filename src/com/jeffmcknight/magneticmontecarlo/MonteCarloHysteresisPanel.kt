@@ -319,6 +319,12 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         }
 
         with(controlPanel) {
+            add(curveRadioButton)
+            add(dipoleRadioButton)
+            add(averagedDipoleRadioButton)
+            add(averagedInteractionsRadioButton)
+            // Add vertical space between radio buttons and combo buttons
+            add(Box.createRigidArea(Dimension(0, 20)))
             // Add combo box panels for lattice dimensions
             add(xComboBoxPanel)
             add(yComboBoxPanel)
@@ -331,15 +337,9 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             add(recordCountPanel)
             add(mAppliedFieldRangePanel)
 
-            // Add vertical space between combo buttons and radio buttons
+            // Add vertical space between combo buttons and the Run button
             add(Box.createRigidArea(Dimension(0, 20)))
-            add(curveRadioButton)
-            add(dipoleRadioButton)
-            add(averagedDipoleRadioButton)
-            add(averagedInteractionsRadioButton)
-            // Add vertical space between radio buttons and run JButton
-            add(Box.createRigidArea(Dimension(0, 20)))
-            // Add run JButton
+            // Add Run button
             add(buttonRunPanel)
             add(Box.createVerticalStrut(300))
         }
