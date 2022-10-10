@@ -4,6 +4,7 @@ import com.jeffmcknight.magneticmontecarlo.model.*
 import com.jeffmcknight.magneticmontecarlo.DipoleSphere3f
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
 
 /**
@@ -11,15 +12,15 @@ import kotlinx.coroutines.flow.scan
  * recording pass, which are implicitly sorted by dipole coercivity, descending.
  * TODO: unit tests!
  */
-class RecordedFieldInteractor(private val repo: Repository) {
+class RecordedFieldInteractor(repo: Repository) {
 
     /**
-     * Sums up all the dipole value emitted since the last [MediaGeometry] change.  We aggregate the lists of
+     * Sums up all the dipole values emitted since the last [MediaGeometry] change.  We aggregate the lists of
      * [RecordedField] and organize by the [AppliedField] (using it as the key to a mutable map).
      * We use this intermediate result to determine the average dipole value over the all accumulated recordings.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    val dipoleAccumulatorFlo: Flow<DipoleAccumulator> = repo.recordingDoneFlo
+    private val dipoleAccumulatorFlo: Flow<DipoleAccumulator> = repo.recordingDoneFlo
         .scan(DipoleAccumulator.EMPTY) { acc: DipoleAccumulator, next: RecordingResult ->
             // Get the list of [RecordedField]s for each dipole in the most recent simulation
             val nextRecordedFieldList: List<RecordedField> = next.magneticMedia.map { it.m }
@@ -41,6 +42,20 @@ class RecordedFieldInteractor(private val repo: Repository) {
                 DipoleAccumulator(
                     mutableMapOf(next.appliedField to RunningTotal(nextRecordedFieldList, 1)),
                     next.magneticMedia.geometry
+                )
+            }
+        }
+
+    /**
+     * Emits a list of [DipoleAverages]
+     */
+    val dipoleAverageFlo: Flow<List<DipoleAverages>> =
+        dipoleAccumulatorFlo.map { accumulator: DipoleAccumulator ->
+            accumulator.runningTotals.map { entry: Map.Entry<AppliedField, RunningTotal> ->
+                DipoleAverages(
+                    entry.value.dipoleTotalList.map { recordedField -> recordedField / entry.value.count },
+                    entry.value.count,
+                    entry.key
                 )
             }
         }

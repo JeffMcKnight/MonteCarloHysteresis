@@ -5,6 +5,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 /**
  * Analyzes the fields that the dipoles impose on each other during recording
@@ -14,13 +16,18 @@ class InteractionFieldInteractor(repo: Repository) {
     /**
      * Emits a [InteractionResult]
      */
-    private val interactionFieldsFlo: Flow<InteractionResult> = repo.recordingDoneFlo
-            .map { InteractionResult(it.magneticMedia.netInteractionFields.toList(), it.appliedField, it.magneticMedia.geometry) }
+    private val interactionFieldsFlo: Flow<InteractionResult> = repo.recordingDoneFlo.map {
+        InteractionResult(
+            it.magneticMedia.netInteractionFields.toList(),
+            it.appliedField,
+            it.magneticMedia.geometry
+        )
+    }
 
     /**
      * Accumulates the total interaction field at each dipole so we can calculate the average field
      * and corresponding standard deviation at each dipole.
-     * TODO: refactor to use common code from [dipoleAccumulatorFlo]
+     * TODO: refactor to use common code from [RecordedFieldInteractor.dipoleAccumulatorFlo]
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     val interactionAccumulatorFlo: Flow<InteractionAccumulator> = interactionFieldsFlo
@@ -38,7 +45,12 @@ class InteractionFieldInteractor(repo: Repository) {
                     val interactionTotal = InteractionTotal(updatedTotals, updatedCount)
                     return@run (acc.runningTotals + mapOf(next.appliedField to interactionTotal)).toMutableMap()
                 }
-                    .let { totalsMap: MutableMap<AppliedField, InteractionTotal> -> InteractionAccumulator(totalsMap, acc.geometry) }
+                    .let { totalsMap: MutableMap<AppliedField, InteractionTotal> ->
+                        InteractionAccumulator(
+                            totalsMap,
+                            acc.geometry
+                        )
+                    }
             } else {
                 val interactionTotal = InteractionTotal(nextInteractionFieldList, 1)
                 return@scan InteractionAccumulator(
@@ -62,5 +74,16 @@ class InteractionFieldInteractor(repo: Repository) {
                     )
                 }
             }
+
+    /**
+     * Calculate the standard deviation
+     * TODO: this is just sample code; tweak to use with our data
+     */
+    fun standardDeviation(data: DoubleArray): Double {
+        val mean = data.average()
+        return data
+            .fold(0.0) { accumulator, next -> accumulator + (next - mean).pow(2.0) }
+            .let { sqrt(it / data.size) }
+    }
 
 }
