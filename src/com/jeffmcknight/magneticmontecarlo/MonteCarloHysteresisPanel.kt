@@ -3,7 +3,12 @@ package com.jeffmcknight.magneticmontecarlo
 import com.jeffmcknight.magneticmontecarlo.ChartType.*
 import com.jeffmcknight.magneticmontecarlo.model.AppliedField
 import com.jeffmcknight.magneticmontecarlo.model.DipoleAverages
+import com.jeffmcknight.magneticmontecarlo.model.RecordedField
+import com.jeffmcknight.magneticmontecarlo.ui.Trace2DUpdating
 import info.monitorenter.gui.chart.Chart2D
+import info.monitorenter.gui.chart.ITrace2D
+import info.monitorenter.gui.chart.ITracePoint2D
+import info.monitorenter.gui.chart.TracePoint2D
 import info.monitorenter.gui.chart.traces.Trace2DSimple
 import info.monitorenter.gui.chart.traces.painters.TracePainterDisc
 import kotlinx.coroutines.CoroutineScope
@@ -144,8 +149,10 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
 
     // Create a frame.
     private var mCurveTraceCount = 0
+
     /** Contains the various charts that we show (B-H curve, individual dipole values, etc) */
     private val mChartPanel: JPanel
+
     /** Contains all the app controls (radio buttons, run button, etc) */
     private val mControlsPanel: JPanel
     private var traceHue = 0f
@@ -191,21 +198,9 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
          * TODO: can we just update traces rather than removing and replacing all of them
          */
         coroutineScope.launch {
-            viewModel.dipoleAverageFlo.collect { traceDataList ->
+            viewModel.dipoleAverageFlo.collect { dipoleAverages ->
                 when (mActiveChart) {
-                    DIPOLE_AVERAGES -> {
-                        averagedIndividualDipolesChart.removeAllTraces()
-                        val titleXAxis = "n [Dipole rank by coercivity]"
-                        traceDataList.forEach { averages: DipoleAverages ->
-                            val traceName = "Averaged Dipoles\t-- Applied Field: ${averages.appliedField}\t-- Recording Passes: ${averages.count}"
-                            val traceColor = averages.color
-                            val pointList = averages.dipoles.mapIndexed { index: Int, h: Float -> Point2d(index.toDouble(), h.toDouble()) }
-                            showAsTrace(
-                                TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]"),
-                                averagedIndividualDipolesChart
-                            )
-                        }
-                    }
+                    DIPOLE_AVERAGES -> handleDipoleAverages(dipoleAverages)
                     INTERACTION_AVERAGES, MH_CURVE_POINT, MH_CURVE -> {}
                 }
             }
@@ -220,11 +215,41 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 when (mActiveChart) {
                     INTERACTION_AVERAGES -> {
                         interactionFieldChart.removeAllTraces()
-                        traces.forEach { showAsTrace(it, interactionFieldChart) }
+                        traces.forEach { addTrace(it, interactionFieldChart) }
                     }
                     DIPOLE_AVERAGES, MH_CURVE_POINT, MH_CURVE -> {}
                 }
+            }
+        }
+    }
 
+    /**
+     * Add or remove [ITrace2D]s, as necessary, and then update the [ITracePoint2D] data in each
+     * [ITrace2D].
+     *
+     * If [averagedIndividualDipolesChart] does not have the same number of [ITrace2D]s as
+     * [traceDataList] items, we remove all the [ITrace2D]s and recreate them.
+     *
+     * Otherwise, we just update the points in the existing traces by using [Trace2DUpdating].
+     *
+     * TODO: add physical units to traces
+     */
+    private fun handleDipoleAverages(traceDataList: List<DipoleAverages>) {
+        if (traceDataList.size != averagedIndividualDipolesChart.traces.size) {
+            averagedIndividualDipolesChart.removeAllTraces()
+            repeat(traceDataList.size) { index ->
+                averagedIndividualDipolesChart.addTrace(
+                    Trace2DUpdating().apply {
+                        setTracePainter(TracePainterDisc())
+                        color = colorList[index]
+                    }
+                )
+            }
+        }
+        averagedIndividualDipolesChart.traces.forEachIndexed { index: Int, trace: ITrace2D ->
+            trace.name = traceDataList[index].toName()
+            traceDataList[index].dipoles.forEachIndexed { i: Int, h: RecordedField ->
+                trace.addPoint(TracePoint2D(i.toDouble(), h.toDouble()))
             }
         }
     }
@@ -282,7 +307,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             add(dipoleRadioButton)
             add(averagedDipoleRadioButton)
             add(averagedInteractionsRadioButton)
-            when(mActiveChart) {
+            when (mActiveChart) {
                 DIPOLE_AVERAGES -> setSelected(averagedDipoleRadioButton.model, true)
                 INTERACTION_AVERAGES -> setSelected(averagedInteractionsRadioButton.model, true)
                 MH_CURVE_POINT -> setSelected(dipoleRadioButton.model, true)
@@ -307,7 +332,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             layout = BoxLayout(this, BoxLayout.X_AXIS)
             val buttonRun: JButton = JButton("Run").apply {
                 verticalTextPosition = AbstractButton.CENTER
-                horizontalTextPosition = AbstractButton.CENTER //aka LEFT, for left-to-right locales
+                horizontalTextPosition = AbstractButton.CENTER // aka LEFT, for left-to-right locales
                 mnemonic = KeyEvent.VK_R
                 actionCommand = RUN_SIMULATION
                 addActionListener(this@MonteCarloHysteresisPanel)
@@ -346,10 +371,11 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
 
         // Add border padding around entire panel
         border = BorderFactory.createEmptyBorder(
-                DEFAULT_BORDER_SPACE,
-                DEFAULT_BORDER_SPACE,
-                DEFAULT_BORDER_SPACE,
-                DEFAULT_BORDER_SPACE)
+            DEFAULT_BORDER_SPACE,
+            DEFAULT_BORDER_SPACE,
+            DEFAULT_BORDER_SPACE,
+            DEFAULT_BORDER_SPACE
+        )
         controlPanel.maximumSize = Dimension(200, 600)
     }
 
@@ -400,39 +426,41 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
      * @param magneticMedia TODO
      * @return
      */
-    private fun buildTraceName(title: String,
-                               count: Int,
-                               fastAveragePeriod: Int,
-                               magneticMedia: MagneticMedia): String {
+    private fun buildTraceName(
+        title: String,
+        count: Int,
+        fastAveragePeriod: Int,
+        magneticMedia: MagneticMedia
+    ): String {
         val calendar = Calendar.getInstance()
         calendar.timeInMillis = System.currentTimeMillis()
         return StringBuilder(title)
-                .append(count.toString())
-                .append(" : ")
-                .append(magneticMedia.xCount)
-                .append("x")
-                .append(magneticMedia.yCount)
-                .append("x")
-                .append(magneticMedia.zCount)
-                .append(" - Packing Fraction: ")
-                .append(magneticMedia.packingFraction)
-                .append(" - Radius [um]: ")
-                .append(magneticMedia.dipoleRadius)
-                .append(" - Date: ")
-                .append(calendar[Calendar.YEAR])
-                .append("-")
-                .append(calendar[Calendar.MONTH])
-                .append("-")
-                .append(calendar[Calendar.DATE])
-                .append(" T")
-                .append(calendar[Calendar.HOUR_OF_DAY])
-                .append(":")
-                .append(calendar[Calendar.MINUTE])
-                .append(":")
-                .append(calendar[Calendar.SECOND])
-                .append(" -- ")
-                .append(chartDescription(fastAveragePeriod))
-                .toString()
+            .append(count.toString())
+            .append(" : ")
+            .append(magneticMedia.xCount)
+            .append("x")
+            .append(magneticMedia.yCount)
+            .append("x")
+            .append(magneticMedia.zCount)
+            .append(" - Packing Fraction: ")
+            .append(magneticMedia.packingFraction)
+            .append(" - Radius [um]: ")
+            .append(magneticMedia.dipoleRadius)
+            .append(" - Date: ")
+            .append(calendar[Calendar.YEAR])
+            .append("-")
+            .append(calendar[Calendar.MONTH])
+            .append("-")
+            .append(calendar[Calendar.DATE])
+            .append(" T")
+            .append(calendar[Calendar.HOUR_OF_DAY])
+            .append(":")
+            .append(calendar[Calendar.MINUTE])
+            .append(":")
+            .append(calendar[Calendar.SECOND])
+            .append(" -- ")
+            .append(chartDescription(fastAveragePeriod))
+            .toString()
     }
 
     /**
@@ -508,8 +536,9 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         val traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, chartCurves.magneticCube)
         val titleXAxis = "H, applied [nWb]"
         val pointList = chartCurves.getAverageMCurve().recordPoints.map { Point2d(it.h.toDouble(), it.m.toDouble()) }
-        showAsTrace(
-            TraceSpec(traceName, titleXAxis, traceColor, pointList,"Recorded Flux [nWb/m]"), chart
+        addTrace(
+            TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]"),
+            chart
         )
     }
 
@@ -517,7 +546,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
      * Show the data in [traceSpec] on the [chart] as a [Trace2DSimple]
      * @param chart the [Chart2D] to add the [Trace2DSimple]s to
      */
-    private fun showAsTrace(traceSpec: TraceSpec, chart: Chart2D) {
+    private fun addTrace(traceSpec: TraceSpec, chart: Chart2D) {
         Trace2DSimple()
             .apply {
                 name = traceSpec.name
@@ -535,7 +564,6 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 traceSpec.pointList.forEach { point -> trace.addPoint(point.x, point.y) }
             }
     }
-
 
     companion object {
         private val TAG = MonteCarloHysteresisPanel::class.java.simpleName
@@ -567,6 +595,14 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         val DIPOLE_RADIUS_OPTIONS = arrayOf(0.1F, 0.2F, 0.3F, 0.4F, 0.5F, 0.6F, 0.7F, 0.8F, 0.9F, 1.0F, 1.1F, 1.2F, 1.3F, 1.4F, 1.5F, 1.6F, 1.7F, 1.8F, 1.9F, 2.0F)
         val H_FIELD_RANGE_ITEMS = arrayOf(0F, 10F, 20F, 30F, 40F, 50F, 60F, 70F, 80F, 90F, 100F, 110F, 120F, 130F, 140F, 150F, 160F, 170F, 180F, 190F, 200F)
     }
+}
+
+/**
+ * Creates names for the traces that show the values of individual dipoles, averaged over multiple
+ * recordings.
+ */
+private fun DipoleAverages.toName(): String {
+    return "Averaged Dipoles\t-- Applied Field: ${appliedField}\t-- Recording Passes: $count"
 }
 
 private fun ItemEvent.isSelected(): Boolean {
