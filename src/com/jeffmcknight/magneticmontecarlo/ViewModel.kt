@@ -4,6 +4,7 @@ import com.jeffmcknight.magneticmontecarlo.MagneticMedia.Companion.empty
 import com.jeffmcknight.magneticmontecarlo.interactor.InteractionFieldInteractor
 import com.jeffmcknight.magneticmontecarlo.interactor.RecordedFieldInteractor
 import com.jeffmcknight.magneticmontecarlo.model.*
+import info.monitorenter.gui.chart.TracePoint2D
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,9 +12,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.awt.Color
 import java.awt.Color.*
-import javax.vecmath.Point2d
 import kotlin.math.absoluteValue
-
 
 /**
  * TODO: unit tests!
@@ -47,19 +46,19 @@ class ViewModel(
                 val traceName =
                     "Averaged Interaction at Dipoles\t-- Applied Field: ${averages.appliedField}\t-- Recording Passes: ${averages.count}"
                 val traceColor = averages.appliedField.toColor()
-                val pointList = averages.averageInteractionFields.mapIndexed {
-                        index: Int, h: InteractionField -> Point2d(index.toDouble(), h.toDouble())
-                }
+                val pointList =
+                    averages.averageInteractionFields.mapIndexed { index: Int, h: InteractionField ->
+                        TracePoint2D(index.toDouble(), h.toDouble())
+                    }
                 TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]")
             }
         }
-
 
     /**
      * Emits a list of [DipoleAverages]; that is to say, a list of the average value of each dipole
      * averaged over a series of recording passes.
      */
-    val dipoleAverageFlo: Flow<List<DipoleAverages>> =
+    val dipoleAverageFlo: Flow<List<TraceSpec>> =
         recordedFieldInteractor.dipoleAccumulatorFlo.map { accumulator: DipoleAccumulator ->
             accumulator.runningTotals.map { entry: Map.Entry<AppliedField, RunningTotal> ->
                 DipoleAverages(
@@ -67,7 +66,7 @@ class ViewModel(
                     entry.value.count,
                     entry.key,
                     entry.key.toColor()
-                )
+                ).toTraceSpec()
             }
         }
 
@@ -120,18 +119,35 @@ class ViewModel(
     fun setPackingFraction(fraction: Float) {
         mediaGeometry = mediaGeometry.copy(packingFraction = fraction)
     }
-
 }
 
 /**
  * TODO: take the divisor from the max [AppliedField]
  */
 private fun AppliedField.toColor(): Color {
-    return colorList[((this.absoluteValue / 5) % 10 ).toInt()]
+    return colorList[((this.absoluteValue / 5) % 10).toInt()]
 }
 
 /** Copied from javafx.scene.paint.Color */
 val BROWN: Color = Color(0.64705884f, 0.16470589f, 0.16470589f)
+
 /** Copied from javafx.scene.paint.Color */
 val VIOLET = Color(0.93333334f, 0.50980395f, 0.93333334f)
 val colorList: List<Color> = listOf(BLACK, BROWN, RED, ORANGE, YELLOW.darker(), GREEN.darker(), BLUE, VIOLET, GRAY, PINK)
+fun DipoleAverages.toTraceSpec(): TraceSpec {
+    return TraceSpec(
+        this.toName(),
+        "",
+        color,
+        dipoles.mapIndexed { i: Int, h: RecordedField -> TracePoint2D(i.toDouble(), h.toDouble()) },
+        ""
+    )
+}
+
+/**
+ * Creates names for the traces that show the values of individual dipoles, averaged over multiple
+ * recordings.
+ */
+private fun DipoleAverages.toName(): String {
+    return "Averaged Dipoles\t-- Applied Field: ${appliedField}\t-- Recording Passes: $count"
+}

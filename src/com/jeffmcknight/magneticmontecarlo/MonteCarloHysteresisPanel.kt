@@ -2,8 +2,6 @@ package com.jeffmcknight.magneticmontecarlo
 
 import com.jeffmcknight.magneticmontecarlo.ChartType.*
 import com.jeffmcknight.magneticmontecarlo.model.AppliedField
-import com.jeffmcknight.magneticmontecarlo.model.DipoleAverages
-import com.jeffmcknight.magneticmontecarlo.model.RecordedField
 import com.jeffmcknight.magneticmontecarlo.ui.Trace2DUpdating
 import info.monitorenter.gui.chart.Chart2D
 import info.monitorenter.gui.chart.ITrace2D
@@ -22,7 +20,6 @@ import java.awt.event.ItemEvent
 import java.awt.event.KeyEvent
 import java.util.*
 import javax.swing.*
-import javax.vecmath.Point2d
 
 /**
  * UI that displays the data as charts.
@@ -194,30 +191,27 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 }
             }
         }
-        /**
-         * TODO: can we just update traces rather than removing and replacing all of them
-         */
-        coroutineScope.launch {
-            viewModel.dipoleAverageFlo.collect { dipoleAverages ->
-                when (mActiveChart) {
-                    DIPOLE_AVERAGES -> handleDipoleAverages(dipoleAverages)
-                    INTERACTION_AVERAGES, MH_CURVE_POINT, MH_CURVE -> {}
-                }
-            }
-        }
         coroutineScope.launch {
             viewModel.curveFamilyFlo.collect {
                 addMhPoints(it, bhChart)
             }
         }
         coroutineScope.launch {
-            viewModel.interactionAverageTraceFlo.collect { traces: List<TraceSpec> ->
+            viewModel.dipoleAverageFlo.collect { traceSpecs: List<TraceSpec> ->
                 when (mActiveChart) {
-                    INTERACTION_AVERAGES -> {
-                        interactionFieldChart.removeAllTraces()
-                        traces.forEach { addTrace(it, interactionFieldChart) }
+                    DIPOLE_AVERAGES, INTERACTION_AVERAGES ->
+                        handleTraceSpecs(averagedIndividualDipolesChart, traceSpecs)
+                    MH_CURVE_POINT, MH_CURVE -> {}
+                }
+            }
+        }
+        coroutineScope.launch {
+            viewModel.interactionAverageTraceFlo.collect { traceSpecs: List<TraceSpec> ->
+                when (mActiveChart) {
+                    DIPOLE_AVERAGES, INTERACTION_AVERAGES -> {
+                        handleTraceSpecs(interactionFieldChart, traceSpecs)
                     }
-                    DIPOLE_AVERAGES, MH_CURVE_POINT, MH_CURVE -> {}
+                    MH_CURVE_POINT, MH_CURVE -> {}
                 }
             }
         }
@@ -228,17 +222,20 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
      * [ITrace2D].
      *
      * If [averagedIndividualDipolesChart] does not have the same number of [ITrace2D]s as
-     * [traceDataList] items, we remove all the [ITrace2D]s and recreate them.
+     * [traceSpecList] items, we remove all the [ITrace2D]s and recreate them.
      *
      * Otherwise, we just update the points in the existing traces by using [Trace2DUpdating].
      *
      * TODO: add physical units to traces
+     *
+     * @param chart the [Chart2D] that will draw the Traces
+     * @param traceSpecList the data to draw in the Traces
      */
-    private fun handleDipoleAverages(traceDataList: List<DipoleAverages>) {
-        if (traceDataList.size != averagedIndividualDipolesChart.traces.size) {
-            averagedIndividualDipolesChart.removeAllTraces()
-            repeat(traceDataList.size) { index ->
-                averagedIndividualDipolesChart.addTrace(
+    private fun handleTraceSpecs(chart: Chart2D, traceSpecList: List<TraceSpec>) {
+        if (traceSpecList.size != chart.traces.size) {
+            chart.removeAllTraces()
+            repeat(traceSpecList.size) { index ->
+                chart.addTrace(
                     Trace2DUpdating().apply {
                         setTracePainter(TracePainterDisc())
                         color = colorList[index]
@@ -246,11 +243,9 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                 )
             }
         }
-        averagedIndividualDipolesChart.traces.forEachIndexed { index: Int, trace: ITrace2D ->
-            trace.name = traceDataList[index].toName()
-            traceDataList[index].dipoles.forEachIndexed { i: Int, h: RecordedField ->
-                trace.addPoint(TracePoint2D(i.toDouble(), h.toDouble()))
-            }
+        chart.traces.forEachIndexed { index: Int, trace: ITrace2D ->
+            trace.name = traceSpecList[index].name
+            traceSpecList[index].pointList.forEach { trace.addPoint(it) }
         }
     }
 
@@ -535,7 +530,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         traceHue += 0.22f
         val traceName = buildTraceName(CURVE_CHART_TITLE, mCurveTraceCount, -1, chartCurves.magneticCube)
         val titleXAxis = "H, applied [nWb]"
-        val pointList = chartCurves.getAverageMCurve().recordPoints.map { Point2d(it.h.toDouble(), it.m.toDouble()) }
+        val pointList = chartCurves.getAverageMCurve().recordPoints.map { TracePoint2D(it.h.toDouble(), it.m.toDouble()) }
         addTrace(
             TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]"),
             chart
@@ -561,7 +556,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                     axisY.axisTitle.title = traceSpec.titleYAxis
                 }
                 // Add the recording points to the trace
-                traceSpec.pointList.forEach { point -> trace.addPoint(point.x, point.y) }
+                traceSpec.pointList.forEach { point -> trace.addPoint(point) }
             }
     }
 
@@ -597,14 +592,6 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     }
 }
 
-/**
- * Creates names for the traces that show the values of individual dipoles, averaged over multiple
- * recordings.
- */
-private fun DipoleAverages.toName(): String {
-    return "Averaged Dipoles\t-- Applied Field: ${appliedField}\t-- Recording Passes: $count"
-}
-
 private fun ItemEvent.isSelected(): Boolean {
     return stateChange == ItemEvent.SELECTED
 }
@@ -619,6 +606,6 @@ data class TraceSpec(
     val name: String,
     val titleXAxis: String,
     val color: Color,
-    val pointList: List<Point2d>,
+    val pointList: List<ITracePoint2D>,
     val titleYAxis: String
 )
