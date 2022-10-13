@@ -18,7 +18,6 @@ import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
 import java.awt.event.ItemEvent
 import java.awt.event.KeyEvent
-import java.util.*
 import javax.swing.*
 
 /**
@@ -175,24 +174,8 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     private var mCurveTraceCount = 0
 
     /** Contains the various charts that we show (B-H curve, individual dipole values, etc) */
-    private val mChartPanel: JPanel
-
-    /** Contains all the app controls (radio buttons, run button, etc) */
-    private val mControlsPanel: JPanel
-    private var chartType = SINGLE_RECORDING
-
-    /**
-     * Create UI, and set up Flow collectors
-     * TODO:
-     */
-    init {
-        // Create a frame.
-        this.layout = BoxLayout(this, BoxLayout.X_AXIS)
-        mControlsPanel = JPanel().apply {
-            layout = BoxLayout(this, BoxLayout.PAGE_AXIS)
-            setUpControlsPanel(this)
-        }
-        mChartPanel = JPanel().apply {
+    private val chartPanel by lazy {
+        JPanel().apply {
             layout = BoxLayout(this, BoxLayout.X_AXIS)
             minimumSize = Dimension(800, 600)
             setLocation(0, 0)
@@ -203,8 +186,27 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             it.add(shoulderChart)
             it.add(singleRecordingChart)
         }
-        this.add(mControlsPanel)
-        this.add(mChartPanel)
+    }
+
+    /** Contains all the app controls (radio buttons, run button, etc) */
+    private val controlsPanel by lazy {
+        JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.PAGE_AXIS)
+            setUpControlsPanel(this)
+        }
+    }
+
+    private var chartType = SINGLE_RECORDING
+
+    /**
+     * Create UI, and set up Flow collectors
+     * TODO:
+     */
+    init {
+        // Create a frame.
+        this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+        this.add(controlsPanel)
+        this.add(chartPanel)
         updateChartType(chartType)
 
         // FIXME: is this the right scope/way to collect items emitted by recordingDoneFlo ?
@@ -234,6 +236,14 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
                         handleTraceSpecs(interactionFieldChart, traceSpecs)
                     }
                     SINGLE_RECORDING, BH_CURVE, SHOULDER_CURVE -> {}
+                }
+            }
+        }
+        coroutineScope.launch {
+            viewModel.shoulderTraceFlo.collect { traceSpecs: List<TraceSpec> ->
+                when (chartType) {
+                    SHOULDER_CURVE -> handleTraceSpecs(shoulderChart, traceSpecs)
+                    DIPOLE_AVERAGES, INTERACTION_AVERAGES, SINGLE_RECORDING, BH_CURVE -> {}
                 }
             }
         }

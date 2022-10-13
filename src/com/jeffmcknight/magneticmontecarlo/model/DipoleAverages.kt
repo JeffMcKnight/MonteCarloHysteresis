@@ -6,7 +6,7 @@ package com.jeffmcknight.magneticmontecarlo.model
  * @param appliedField the field applied to the magnetic media during the recording
  */
 data class DipoleAverages(
-    val dipoles: List<RecordedField>,
+    val dipoles: List<Flux>,
     val count: Int,
     val appliedField: AppliedField
 )
