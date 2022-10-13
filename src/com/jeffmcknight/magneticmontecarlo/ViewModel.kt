@@ -42,15 +42,13 @@ class ViewModel(
     val interactionAverageTraceFlo: Flow<List<TraceSpec>> =
         interactionFieldInteractor.interactionAverageFlo.map { traceDataList: List<InteractionAverages> ->
             traceDataList.map { averages: InteractionAverages ->
-                val titleXAxis = "n [Dipole rank by coercivity]"
                 val traceName =
                     "Averaged Interaction at Dipoles\t-- Applied Field: ${averages.appliedField}\t-- Recording Passes: ${averages.count}"
-                val traceColor = averages.appliedField.toColor()
                 val pointList =
                     averages.averageInteractionFields.mapIndexed { index: Int, h: InteractionField ->
                         TracePoint2D(index.toDouble(), h.toDouble())
                     }
-                TraceSpec(traceName, titleXAxis, traceColor, pointList, "Recorded Flux [nWb/m]")
+                TraceSpec(traceName, pointList)
             }
         }
 
@@ -64,8 +62,7 @@ class ViewModel(
                 DipoleAverages(
                     entry.value.dipoleTotalList.map { recordedField -> recordedField / entry.value.count },
                     entry.value.count,
-                    entry.key,
-                    entry.key.toColor()
+                    entry.key
                 ).toTraceSpec()
             }
         }
@@ -121,26 +118,16 @@ class ViewModel(
     }
 }
 
-/**
- * TODO: take the divisor from the max [AppliedField]
- */
-private fun AppliedField.toColor(): Color {
-    return colorList[((this.absoluteValue / 5) % 10).toInt()]
-}
-
 /** Copied from javafx.scene.paint.Color */
 val BROWN: Color = Color(0.64705884f, 0.16470589f, 0.16470589f)
 
 /** Copied from javafx.scene.paint.Color */
 val VIOLET = Color(0.93333334f, 0.50980395f, 0.93333334f)
-val colorList: List<Color> = listOf(BLACK, BROWN, RED, ORANGE, YELLOW.darker(), GREEN.darker(), BLUE, VIOLET, GRAY, PINK)
+val traceColors: List<Color> = listOf(BLACK, BROWN, RED, ORANGE, YELLOW.darker(), GREEN.darker(), BLUE, VIOLET, GRAY, PINK)
 fun DipoleAverages.toTraceSpec(): TraceSpec {
     return TraceSpec(
         this.toName(),
-        "",
-        color,
-        dipoles.mapIndexed { i: Int, h: RecordedField -> TracePoint2D(i.toDouble(), h.toDouble()) },
-        ""
+        dipoles.mapIndexed { i: Int, h: RecordedField -> TracePoint2D(i.toDouble(), h.toDouble()) }
     )
 }
 
