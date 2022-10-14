@@ -46,7 +46,9 @@ class ViewModel(
      * the [TraceSpec], [TracePoint2D.x] represents the [AppliedField], and [TracePoint2D.y]
      * represents the index of the dipole at the shoulder point.
      */
-    val shoulderTraceFlo: Flow<List<TraceSpec>> = averageFluxesFlo.map { it.toShoulderTraceSpecs() }
+    val shoulderTraceFlo: Flow<List<TraceSpec>> = averageFluxesFlo
+        .map { it.toShoulderTraceSpecs() }
+        .map { pointList -> listOf(TraceSpec("Shoulder Index Chart", pointList)) }
 
     private var mediaGeometry = MediaGeometry()
     val curveFamilyFlo = MutableStateFlow(CurveFamily(0, empty.geometry, 0F))
@@ -149,20 +151,34 @@ class ViewModel(
  * 3. wrap List<ITracePoint2D> in a [TraceSpec]
  * 4. add that single [TraceSpec] to a list
  */
-private fun Map<AppliedField, List<Flux>>.toShoulderTraceSpecs(): List<TraceSpec> {
+private fun Map<AppliedField, List<Flux>>.toShoulderTraceSpecs(): List<ITracePoint2D> {
     return this.map { fluxEntry: Map.Entry<AppliedField, List<Flux>> ->
-        TraceSpec("", fluxEntry.value.toTracePoint2D())
+        fluxEntry.toShoulderPoint()
     }
 }
 
 /**
  * FIXME: the target type should be Map<AppliedField, List<Flux>>
  */
-private fun List<Flux>.toTracePoint2D(): List<ITracePoint2D> {
-    return this.mapIndexed { index: Int, flux: Flux ->
-        TracePoint2D(index.toDouble(), flux.toDouble())
-    }
+private fun Map.Entry<AppliedField, List<Flux>>.toShoulderPoint(): ITracePoint2D {
+    return TracePoint2D(key.toDouble(), value.toShoulderIndex())
 }
+
+/**
+ * Returns the index of the first item whose value is below the shoulder edge.
+ */
+private fun List<Flux>.toShoulderIndex(): Double {
+    return indexOfFirst { it < shoulderEdge() }.toDouble()
+}
+
+/**
+ * The value at the edge of the shoulder.  For now, we hard code it to 5% down from the first value
+ * (which we assume is the maximum value)to the last value (which we assume is the minimum)
+ * FIXME: should handle negative [Flux] values
+ * TODO: use [maxByOrNull] and [minByOrNull] instead of [first] and [last]
+ */
+private fun List<Flux>.shoulderEdge() =
+    first() - ((first() - last()) * 0.05F)
 
 /**
  * Converts the accumulated dipole flux totals from multiple recordings to a map of average flux
