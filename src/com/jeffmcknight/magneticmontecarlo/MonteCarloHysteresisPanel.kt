@@ -80,6 +80,21 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             }
         }
     }
+    private val shoulderCountBox = JComboBox(SHOULDER_POINT_COUNTS).apply {
+        addItemListener {
+            if (it.isSelected()) {
+                viewModel.shoulderPointCount = (it.item as Int)
+            }
+        }
+    }
+
+    private val shoulderPointCountPanel by lazy {
+        buildComboBoxPanel(
+            INITIAL_SHOULDER_POINT_COUNT_INDEX,
+            SHOULDER_POINT_COUNT_LABEL,
+            shoulderCountBox
+        )
+    }
 
     /**
      * The field applied to the [MagneticMedia]
@@ -387,6 +402,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
             add(dipoleRadiusPanel)
             add(packingFractionPanel)
             add(recordCountPanel)
+            add(shoulderPointCountPanel)
             add(mAppliedFieldRangePanel)
 
             // Add vertical space between combo buttons and the Run button
@@ -417,6 +433,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         interactionFieldChart.isVisible = (type == INTERACTION_AVERAGES)
         shoulderChart.isVisible = (type == SHOULDER_CURVE)
         singleRecordingChart.isVisible = (type == SINGLE_RECORDING)
+        shoulderPointCountPanel.isVisible = (type == SHOULDER_CURVE)
     }
 
     /**
@@ -528,8 +545,9 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     fun runSimulation(actionCommand: String) {
         if (actionCommand == RUN_SIMULATION) {
             when (chartType) {
-                DIPOLE_AVERAGES, INTERACTION_AVERAGES, SHOULDER_CURVE -> viewModel.recordMultiple()
                 BH_CURVE -> viewModel.recordBhCurve()
+                DIPOLE_AVERAGES, INTERACTION_AVERAGES -> viewModel.recordMultiple()
+                SHOULDER_CURVE -> viewModel.recordShoulderCurve()
                 SINGLE_RECORDING -> viewModel.recordSingle()
             }
         }
@@ -573,6 +591,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
     companion object {
         private val TAG = MonteCarloHysteresisPanel::class.java.simpleName
         const val INITIAL_RECORD_COUNT_INDEX = 0
+        const val INITIAL_SHOULDER_POINT_COUNT_INDEX = 8
         const val DEFAULT_BORDER_SPACE = 30
         const val DEFAULT_APPLIED_FIELD_ITEM = 1
         const val SATURATION_M = 100.0f
@@ -585,7 +604,8 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         const val DIMENSIONS_Z_AXIS_LABEL = "Lattice dimensions (Z-axis):  "
         const val DIPOLE_RADIUS_LABEL = "Dipole radius [um]:               "
         const val PACKING_FRACTION_LABEL = "Packing Fraction:                  "
-        const val RECORDING_PASSES_LABEL = "Number of Recording Passes:  "
+        const val RECORDING_PASSES_LABEL = "Recording Passes:  "
+        const val SHOULDER_POINT_COUNT_LABEL = "Shoulder Curve Points:  "
         const val APPLIED_FIELD_RANGE_LABEL = "Maximum Applied Field (H)"
         const val APPLIED_FIELD_LABEL = "Applied Field (H)"
         const val AVERAGED_DIPOLE_BUTTON_TEXT = "Show Averaged Dipoles"
@@ -597,6 +617,7 @@ class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope
         const val TITLE_X_AXIS_RANKED_DIPOLE = "R [Dipole ranked by coercivity]"
         val LATTICE_SIZES = arrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
         val RECORDING_PASS_COUNT = arrayOf(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192)
+        val SHOULDER_POINT_COUNTS = arrayOf(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50)
         val PACKING_FRACTION_OPTIONS = arrayOf(1.0F, 0.9F, 0.8F, 0.7F, 0.6F, 0.5F, 0.4F, 0.3F, 0.2F, 0.1F)
         val DIPOLE_RADIUS_OPTIONS = arrayOf(0.1F, 0.2F, 0.3F, 0.4F, 0.5F, 0.6F, 0.7F, 0.8F, 0.9F, 1.0F, 1.1F, 1.2F, 1.3F, 1.4F, 1.5F, 1.6F, 1.7F, 1.8F, 1.9F, 2.0F)
         val H_FIELD_RANGE_ITEMS = arrayOf(0F, 10F, 20F, 30F, 40F, 50F, 60F, 70F, 80F, 90F, 100F, 110F, 120F, 130F, 140F, 150F, 160F, 170F, 180F, 190F, 200F)

@@ -1,6 +1,7 @@
 package com.jeffmcknight.magneticmontecarlo
 
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia.Companion.empty
+import com.jeffmcknight.magneticmontecarlo.ViewModel.Companion.SHOULDER_THRESHOLD_PERCENTAGE
 import com.jeffmcknight.magneticmontecarlo.interactor.InteractionFieldInteractor
 import com.jeffmcknight.magneticmontecarlo.interactor.RecordedFieldInteractor
 import com.jeffmcknight.magneticmontecarlo.model.AppliedField
@@ -20,7 +21,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.awt.Color
-import java.awt.Color.*
+import java.awt.Color.BLACK
+import java.awt.Color.BLUE
+import java.awt.Color.GRAY
+import java.awt.Color.GREEN
+import java.awt.Color.PINK
+import java.awt.Color.ORANGE
+import java.awt.Color.RED
+import java.awt.Color.YELLOW
+import kotlin.math.abs
 
 /**
  * TODO: unit tests!
@@ -50,6 +59,10 @@ class ViewModel(
         .map { it.toShoulderTraceSpecs() }
         .map { pointList -> listOf(TraceSpec("Shoulder Index Chart", pointList)) }
 
+    /**
+     * The number of points to generate for the [TraceSpec] emitted by the [shoulderTraceFlo]
+     */
+    var shoulderPointCount = 0
     private var mediaGeometry = MediaGeometry()
     val curveFamilyFlo = MutableStateFlow(CurveFamily(0, empty.geometry, 0F))
     val recordSingleFlo: Flow<MagneticMedia> = repo.recordingDoneFlo.map { it.magneticMedia }
@@ -110,6 +123,29 @@ class ViewModel(
     }
 
     /**
+     * Run [recordCount] sets of recording simulations, each containing [shoulderPointCount]
+     * different [AppliedField]s.
+     */
+    fun recordShoulderCurve() {
+        repeat(recordCount) {
+            repeat(shoulderPointCount) { appliedFieldCount ->
+                repo.record(
+                    mediaGeometry,
+                    toAppliedField(appliedField, appliedFieldCount, shoulderPointCount)
+                )
+            }
+        }
+    }
+
+    private fun toAppliedField(
+        maxAppliedField: AppliedField,
+        appliedFieldCount: Int,
+        times: Int
+    ): AppliedField {
+        return maxAppliedField * appliedFieldCount / times
+    }
+
+    /**
      * Record a set of B-H points for a specific [MediaGeometry] to show the linear and/or saturation regions of the
      * recording.
      * TODO: refactor to use repo
@@ -142,6 +178,10 @@ class ViewModel(
     fun setPackingFraction(fraction: Float) {
         mediaGeometry = mediaGeometry.copy(packingFraction = fraction)
     }
+
+    companion object {
+        const val SHOULDER_THRESHOLD_PERCENTAGE = 0.05F
+    }
 }
 
 /**
@@ -168,17 +208,18 @@ private fun Map.Entry<AppliedField, List<Flux>>.toShoulderPoint(): ITracePoint2D
  * Returns the index of the first item whose value is below the shoulder edge.
  */
 private fun List<Flux>.toShoulderIndex(): Double {
-    return indexOfFirst { it < shoulderEdge() }.toDouble()
+    return indexOfFirst { isBelowThreshold(it) }.toDouble()
 }
 
 /**
- * The value at the edge of the shoulder.  For now, we hard code it to 5% down from the first value
- * (which we assume is the maximum value)to the last value (which we assume is the minimum)
- * FIXME: should handle negative [Flux] values
- * TODO: use [maxByOrNull] and [minByOrNull] instead of [first] and [last]
+ * Checks whether [flux] is at the edge of the shoulder.  For now, we check whether the [flux] is
+ * offset from the [first] value (which we assume is the maximum value) more than
+ * [SHOULDER_THRESHOLD_PERCENTAGE] of the total range (the difference between the [first] and the
+ * [last] value)
+ * TODO: use [maxByOrNull] and [minByOrNull] instead of [first] and [last]?
  */
-private fun List<Flux>.shoulderEdge() =
-    first() - ((first() - last()) * 0.05F)
+private fun List<Flux>.isBelowThreshold(flux: Flux): Boolean =
+    abs(first() - flux) > abs((first() - last()) * SHOULDER_THRESHOLD_PERCENTAGE)
 
 /**
  * Converts the accumulated dipole flux totals from multiple recordings to a map of average flux
