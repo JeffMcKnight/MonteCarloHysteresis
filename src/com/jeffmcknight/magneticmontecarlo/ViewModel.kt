@@ -4,6 +4,7 @@ import com.jeffmcknight.magneticmontecarlo.MagneticMedia.Companion.empty
 import com.jeffmcknight.magneticmontecarlo.ViewModel.Companion.SHOULDER_THRESHOLD_PERCENTAGE
 import com.jeffmcknight.magneticmontecarlo.interactor.InteractionFieldInteractor
 import com.jeffmcknight.magneticmontecarlo.interactor.RecordedFieldInteractor
+import com.jeffmcknight.magneticmontecarlo.ktExtension.indexOfFirstOrNull
 import com.jeffmcknight.magneticmontecarlo.model.AppliedField
 import com.jeffmcknight.magneticmontecarlo.model.DipoleAccumulator
 import com.jeffmcknight.magneticmontecarlo.model.DipoleAverages
@@ -56,7 +57,7 @@ class ViewModel(
      * represents the index of the dipole at the shoulder point.
      */
     val shoulderTraceFlo: Flow<List<TraceSpec>> = averageFluxesFlo
-        .map { it.toShoulderTraceSpecs() }
+        .map { it.toShoulderPoints() }
         .map { pointList -> listOf(TraceSpec("Shoulder Index Chart", pointList)) }
 
     /**
@@ -191,7 +192,7 @@ class ViewModel(
  * 3. wrap List<ITracePoint2D> in a [TraceSpec]
  * 4. add that single [TraceSpec] to a list
  */
-private fun Map<AppliedField, List<Flux>>.toShoulderTraceSpecs(): List<ITracePoint2D> {
+private fun Map<AppliedField, List<Flux>>.toShoulderPoints(): List<ITracePoint2D> {
     return this.map { fluxEntry: Map.Entry<AppliedField, List<Flux>> ->
         fluxEntry.toShoulderPoint()
     }
@@ -201,21 +202,14 @@ private fun Map<AppliedField, List<Flux>>.toShoulderTraceSpecs(): List<ITracePoi
  * FIXME: the target type should be Map<AppliedField, List<Flux>>
  */
 private fun Map.Entry<AppliedField, List<Flux>>.toShoulderPoint(): ITracePoint2D {
-    return TracePoint2D(key.toDouble(), value.toShoulderIndex())
+    return TracePoint2D(key.toDouble(), value.toShoulderIndex().toDouble())
 }
 
 /**
  * Returns the index of the first item whose value is below the shoulder edge.
  */
-private fun List<Flux>.toShoulderIndex(): Double {
-    val firstAboveThreshold = indexOfFirst { exceedsThreshold(it) }
-    return (
-        if (firstAboveThreshold > -1) {
-            firstAboveThreshold
-        } else {
-            size - 1
-        }
-        ).toDouble()
+private fun List<Flux>.toShoulderIndex(): Int {
+    return indexOfFirstOrNull { exceedsThreshold(it) } ?: (size - 1)
 }
 
 /**
@@ -223,6 +217,7 @@ private fun List<Flux>.toShoulderIndex(): Double {
  * offset from the max value by more than [SHOULDER_THRESHOLD_PERCENTAGE] of the total range (the
  * difference between the max and the min).
  * TODO: maybe there's an official statistical way to find the shoulder?
+ * TODO: do we want give the user control over [SHOULDER_THRESHOLD_PERCENTAGE]?
  */
 private fun List<Flux>.exceedsThreshold(flux: Flux): Boolean {
     val max = maxByOrNull { abs(it) } ?: return false
