@@ -25,8 +25,8 @@ import java.awt.Color.BLACK
 import java.awt.Color.BLUE
 import java.awt.Color.GRAY
 import java.awt.Color.GREEN
-import java.awt.Color.PINK
 import java.awt.Color.ORANGE
+import java.awt.Color.PINK
 import java.awt.Color.RED
 import java.awt.Color.YELLOW
 import kotlin.math.abs
@@ -180,7 +180,7 @@ class ViewModel(
     }
 
     companion object {
-        const val SHOULDER_THRESHOLD_PERCENTAGE = 0.05F
+        const val SHOULDER_THRESHOLD_PERCENTAGE = 0.01F
     }
 }
 
@@ -208,18 +208,27 @@ private fun Map.Entry<AppliedField, List<Flux>>.toShoulderPoint(): ITracePoint2D
  * Returns the index of the first item whose value is below the shoulder edge.
  */
 private fun List<Flux>.toShoulderIndex(): Double {
-    return indexOfFirst { isBelowThreshold(it) }.toDouble()
+    val firstAboveThreshold = indexOfFirst { exceedsThreshold(it) }
+    return (
+        if (firstAboveThreshold > -1) {
+            firstAboveThreshold
+        } else {
+            size - 1
+        }
+        ).toDouble()
 }
 
 /**
- * Checks whether [flux] is at the edge of the shoulder.  For now, we check whether the [flux] is
- * offset from the [first] value (which we assume is the maximum value) more than
- * [SHOULDER_THRESHOLD_PERCENTAGE] of the total range (the difference between the [first] and the
- * [last] value)
- * TODO: use [maxByOrNull] and [minByOrNull] instead of [first] and [last]?
+ * Checks whether [flux] is at the edge of the shoulder.  We check whether the [flux] is
+ * offset from the max value by more than [SHOULDER_THRESHOLD_PERCENTAGE] of the total range (the
+ * difference between the max and the min).
+ * TODO: maybe there's an official statistical way to find the shoulder?
  */
-private fun List<Flux>.isBelowThreshold(flux: Flux): Boolean =
-    abs(first() - flux) > abs((first() - last()) * SHOULDER_THRESHOLD_PERCENTAGE)
+private fun List<Flux>.exceedsThreshold(flux: Flux): Boolean {
+    val max = maxByOrNull { abs(it) } ?: return false
+    val min = minByOrNull { abs(it) } ?: return false
+    return ((max - flux) / (max - min)) > SHOULDER_THRESHOLD_PERCENTAGE
+}
 
 /**
  * Converts the accumulated dipole flux totals from multiple recordings to a map of average flux
