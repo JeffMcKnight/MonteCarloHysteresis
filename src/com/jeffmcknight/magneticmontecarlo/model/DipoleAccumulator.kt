@@ -1,6 +1,5 @@
 package com.jeffmcknight.magneticmontecarlo.model
 
-import com.jeffmcknight.magneticmontecarlo.DipoleSphere3f
 import com.jeffmcknight.magneticmontecarlo.MagneticMedia
 
 /**
@@ -30,4 +29,4 @@ data class DipoleAccumulator(
  * @param dipoleTotalList a list of the running totals of the recorded field for each dipole
  * @param count the number of recordings totalled in [dipoleTotalList]
  */
-data class RunningTotal(val dipoleTotalList: List<RecordedField>, val count: Int)
+data class RunningTotal(val dipoleTotalList: List<Flux>, val count: Int)

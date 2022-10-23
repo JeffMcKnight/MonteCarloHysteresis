@@ -15,7 +15,7 @@ class RecordedFieldInteractor(private val repo: Repository) {
 
     /**
      * Sums up all the dipole values emitted since the last [MediaGeometry] change.  We aggregate the
-     * lists of [RecordedField]s and organize by the [AppliedField] (using it as the key to a mutable map).
+     * lists of [Flux]s and organize by the [AppliedField] (using it as the key to a mutable map).
      * We use this intermediate result to determine the average dipole value over the all accumulated
      * recordings.
      */
@@ -23,13 +23,13 @@ class RecordedFieldInteractor(private val repo: Repository) {
     val dipoleAccumulatorFlo: Flow<DipoleAccumulator> = repo.recordingDoneFlo
         .scan(DipoleAccumulator.EMPTY) { acc: DipoleAccumulator, next: RecordingResult ->
             // Get the list of [RecordedField]s for each dipole in the most recent simulation
-            val nextRecordedFieldList: List<RecordedField> = next.magneticMedia.map { it.m }
+            val nextRecordedFieldList: List<Flux> = next.magneticMedia.map { it.m }
             if (acc.geometry == next.magneticMedia.geometry) {
                 run {
                     val runningTotal: RunningTotal? = acc.runningTotals[next.appliedField]
-                    val updatedTotals: List<RecordedField> = runningTotal?.let {
+                    val updatedTotals: List<Flux> = runningTotal?.let {
                         // Add the [RecordedField] from the most recent simulation to the running total
-                        it.dipoleTotalList.zip(nextRecordedFieldList) { a: RecordedField, b: RecordedField -> a + b }
+                        it.dipoleTotalList.zip(nextRecordedFieldList) { a: Flux, b: Flux -> a + b }
                     } ?: nextRecordedFieldList
                     val updatedCount = (runningTotal?.count ?: 0) + 1
                     (acc.runningTotals + mapOf(next.appliedField to RunningTotal(updatedTotals, updatedCount)))

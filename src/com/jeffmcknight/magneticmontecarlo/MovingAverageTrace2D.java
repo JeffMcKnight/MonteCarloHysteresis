@@ -29,8 +29,6 @@ public class MovingAverageTrace2D {
 	}
 
 	/**
-	 * @param movingAveragePeriod
-	 * @param trace
 	 * @param magneticMedia TODO
 	 */
 	public void generateMovingAverage(MagneticMedia magneticMedia) {

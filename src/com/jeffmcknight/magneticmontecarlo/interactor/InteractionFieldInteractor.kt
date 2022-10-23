@@ -62,5 +62,4 @@ class InteractionFieldInteractor(repo: Repository) {
                     )
                 }
             }
-
 }
