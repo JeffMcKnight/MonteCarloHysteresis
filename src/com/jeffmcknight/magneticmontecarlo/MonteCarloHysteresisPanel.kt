@@ -23,10 +23,11 @@ import javax.swing.*
 /**
  * UI that displays the data as charts.
  *
- * TODO: add chart for interaction field standard deviation
  * TODO: move radio button handling logic to ViewModel (I think we're doing processing for charts that we're not showing)
  * TODO: add stop button to stop recordings in progress
  * TODO: add clear button to clear charted data
+ * TODO: option to chart 0..max or -max..max
+ * TODO: add chart for interaction field standard deviation
  *
  */
 class MonteCarloHysteresisPanel(private val viewModel: ViewModel, coroutineScope: CoroutineScope) :

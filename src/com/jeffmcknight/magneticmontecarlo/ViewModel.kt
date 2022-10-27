@@ -33,7 +33,9 @@ import java.awt.Color.YELLOW
 import kotlin.math.abs
 
 /**
- * TODO: unit tests!
+ * TODO:
+ *  option to chart 0..max or -max..max
+ *  unit tests!
  */
 class ViewModel(
     private val coroutineScope: CoroutineScope,
@@ -56,9 +58,15 @@ class ViewModel(
      * the [TraceSpec], [TracePoint2D.x] represents the [AppliedField], and [TracePoint2D.y]
      * represents the index of the dipole at the shoulder point.
      */
-    val shoulderTraceFlo: Flow<List<TraceSpec>> = averageFluxesFlo
-        .map { it.toShoulderPoints() }
-        .map { pointList -> listOf(TraceSpec("Shoulder Index Chart", pointList)) }
+    val shoulderTraceFlo: Flow<List<TraceSpec>> = recordedFieldInteractor.dipoleAccumulatorFlo
+        .map { dipoleAccumulator ->
+            listOf(
+                TraceSpec(
+                    dipoleAccumulator.toRecordCount().toShoulderChartTitle(),
+                    dipoleAccumulator.toAverageFluxesMap().toShoulderPoints()
+                )
+            )
+        }
 
     /**
      * The number of points to generate for the [TraceSpec] emitted by the [shoulderTraceFlo]
@@ -183,6 +191,20 @@ class ViewModel(
     companion object {
         const val SHOULDER_THRESHOLD_PERCENTAGE = 0.01F
     }
+}
+
+/**
+ * @return the title for the Shoulder Index chart
+ */
+private fun Int.toShoulderChartTitle(): String {
+    return "Shoulder Index -- Record Count $this"
+}
+
+/**
+ * @return the minimum number of recording simulations among the sets with the same [AppliedField]
+ */
+private fun DipoleAccumulator.toRecordCount(): Int {
+    return runningTotals.values.minOfOrNull { runningTotal -> runningTotal.count } ?: 0
 }
 
 /**
